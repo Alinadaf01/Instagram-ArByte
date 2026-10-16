@@ -23,6 +23,9 @@ export type AudioAnalysis = {
   voPauses?: [number, number][];
   musicDrop?: number;
   musicDrop2?: number;
+  tempo?: number;
+  beats?: number[]; // seconds in music.mp3
+  downbeats?: number[];
 };
 
 export type Timeline = {
@@ -34,6 +37,8 @@ export type Timeline = {
   bounds: [number, number, number, number];
   ctaStart: number;
   accent: number | null; // second music drop (final-video seconds)
+  beats: number[]; // music beats in final-video seconds
+  downbeats: number[];
   cues: {
     design: Record<keyof typeof CUES.design, number>;
     config: Record<keyof typeof CUES.config, number>;
@@ -126,15 +131,27 @@ export const buildTimeline = (
   const [b0, b1, b2] = bounds;
   const voEnd = voStart + voDuration;
 
+  // music beat grid in final-video time (music is shifted so its drop hits voStart)
+  const shift = analysis?.musicDrop !== undefined ? analysis.musicDrop - MUSIC.dropAt : 0;
+  const toVideo = (xs?: number[]) => (xs ?? []).map((b) => b - shift).filter((b) => b >= -0.01 && b <= end);
+  const beats = toVideo(analysis?.beats);
+  const downbeats = toVideo(analysis?.downbeats);
+  // nudge a UI cue onto the beat when it is already close (keeps speech sync)
+  const q = (x: number) => {
+    let best = x;
+    for (const b of beats) if (Math.abs(b - x) < Math.abs(best - x) || best === x) best = b;
+    return Math.abs(best - x) <= 0.13 ? best : x;
+  };
+
   const words: Word[] = [
     ...introWords,
     ...voWords.map((w) => ({...w, start: w.start + voStart, end: w.end + voStart})),
   ];
 
   const design = {
-    keyboard: findCue(words, b0, b1, CUES.design.keyboard, b0 + 1.2),
-    weight: findCue(words, b0, b1, CUES.design.weight, b0 + 1.6),
-    touch: findCue(words, b0, b1, CUES.design.touch, b0 + 2.4),
+    keyboard: q(findCue(words, b0, b1, CUES.design.keyboard, b0 + 1.2)),
+    weight: q(findCue(words, b0, b1, CUES.design.weight, b0 + 1.6)),
+    touch: q(findCue(words, b0, b1, CUES.design.touch, b0 + 2.4)),
   };
   const c = CUES.config;
   const cpu = findCue(words, b1, b2, c.cpu, b1 + 0.6);
@@ -145,7 +162,16 @@ export const buildTimeline = (
   const ssd128 = Math.max(findCue(words, b1, b2, c.ssd128, ssd), ssd + 0.3);
   const ssd512 = Math.max(findCue(words, b1, b2, c.ssd512, ssd128 + 0.3), ssd128 + 0.6);
   const consult = Math.min(Math.max(findCue(words, b1, b2, c.consult, ssd512 + 0.4), ssd512 + 0.8), b2 - 1.2);
-  const config = {cpu, cpu2, ram, ram2, ssd, ssd128, ssd512, consult};
+  const config = {
+    cpu: q(cpu),
+    cpu2: q(cpu2),
+    ram: q(ram),
+    ram2: q(ram2),
+    ssd: q(ssd),
+    ssd128: q(ssd128),
+    ssd512: q(ssd512),
+    consult: q(consult),
+  };
 
   // second music drop → glow accent wherever it lands
   const drop = analysis?.musicDrop ?? null;
@@ -160,7 +186,7 @@ export const buildTimeline = (
   const emalls = Math.max(findCue(words, b2, cta, t.emalls, torob), torob + 0.25);
   const namad = Math.max(findCue(words, b2, cta, t.namad, emalls), emalls + 0.3);
   const website = Math.min(Math.max(findCue(words, b2, cta, t.website, namad + 1), namad + 2), cta - 1.2);
-  const trust = {years, torob, emalls, namad, website, cta};
+  const trust = {years: q(years), torob: q(torob), emalls: q(emalls), namad: q(namad), website: q(website), cta};
   const ctaStart = cta;
 
   return {
@@ -171,6 +197,8 @@ export const buildTimeline = (
     bounds,
     ctaStart,
     accent,
+    beats,
+    downbeats,
     cues: {design, config, trust},
     words,
   };

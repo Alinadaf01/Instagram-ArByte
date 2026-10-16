@@ -41,8 +41,9 @@ const isKeyword = (w: string) => {
 
 // Word-by-word Persian captions in the lower third: the spoken word lights
 // up white, keywords get a neon purple pill.
-export const Subtitles: React.FC<{words: Word[]; hideFrom?: number; bottom?: number}> = ({
+export const Subtitles: React.FC<{words: Word[]; showFrom?: number; hideFrom?: number; bottom?: number}> = ({
   words,
+  showFrom,
   hideFrom,
   bottom = 470,
 }) => {
@@ -50,6 +51,7 @@ export const Subtitles: React.FC<{words: Word[]; hideFrom?: number; bottom?: num
   const t = frame / FPS;
   const chunks = useMemo(() => chunkWords(words), [words]);
   if (hideFrom !== undefined && t >= hideFrom) return null;
+  if (showFrom !== undefined && t < showFrom) return null;
   const chunk = chunks.find((c) => t >= c.start - 0.05 && t < c.end);
   if (!chunk) return null;
   const enter = pop(frame, Math.round((chunk.start - 0.05) * FPS));

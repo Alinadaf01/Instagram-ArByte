@@ -5,6 +5,7 @@ Writes public/audio-analysis.json with:
   voPauses   – [start, end] pauses in the voiceover (seconds in the file)
   musicDrop  – seconds in music.mp3 where the biggest energy jump (the drop) is
   musicDrop2 – the next big drop after that
+  beats      – beat times in music.mp3 (librosa), downbeats aligned to the drop
 """
 import json
 import re
@@ -62,6 +63,18 @@ def music_drop(path: Path, search_from=4.0, search_to=60.0) -> float:
     return round(best_t, 3)
 
 
+def beat_grid(path: Path, drop: float) -> dict:
+    import librosa
+
+    y, sr = librosa.load(str(path), sr=SR)
+    tempo, beats = librosa.beat.beat_track(y=y, sr=sr, units="time")
+    beats = [round(float(b), 3) for b in beats]
+    # the drop is a bar start → every 4th beat from there is a downbeat
+    k = min(range(len(beats)), key=lambda i: abs(beats[i] - drop))
+    downbeats = [b for i, b in enumerate(beats) if (i - k) % 4 == 0]
+    return {"tempo": round(float(np.atleast_1d(tempo)[0]), 2), "beats": beats, "downbeats": downbeats}
+
+
 def main():
     res = {}
     vo = PUBLIC / "voiceover.m4a"
@@ -75,6 +88,7 @@ def main():
         res["musicDrop"] = music_drop(music)
         # second drop (used as an accent for the website reveal)
         res["musicDrop2"] = music_drop(music, res["musicDrop"] + 20, res["musicDrop"] + 70)
+        res.update(beat_grid(music, res["musicDrop"]))
     (PUBLIC / "audio-analysis.json").write_text(json.dumps(res, indent=2))
     print(json.dumps(res, indent=2))
 

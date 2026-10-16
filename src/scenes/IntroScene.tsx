@@ -6,6 +6,8 @@ import {sec} from '../lib/timeline';
 import {Glass} from '../components/Glass';
 import {SpecIcon} from '../components/Icon';
 import {useBass} from '../lib/audio';
+import {Hook, useHookTimes} from './Hook';
+import {useBeatPulse} from '../lib/beat';
 
 export const IntroScene: React.FC<{durationInFrames: number}> = ({durationInFrames}) => {
   const frame = useCurrentFrame();
@@ -13,12 +15,17 @@ export const IntroScene: React.FC<{durationInFrames: number}> = ({durationInFram
   const introEnd = sec(INTRO_DURATION);
   // slow cinematic push-in on the talking head
   const push = interpolate(frame, [0, introEnd], [1.0, 1.06], clamp);
-  const title = pop(frame, 12);
+  const hook = useHookTimes();
+  const hookOut = sec(hook.out);
+  // the device from the hook lands in the title pill
+  const title = pop(frame, hookOut + 8);
+  const {beat} = useBeatPulse(0, 6);
+  const punch = frame < hookOut + 10 ? 1 + beat * 0.03 : 1;
   const side = INTRO_BADGE_SIDE;
 
   return (
     <AbsoluteFill style={{background: COLORS.bgDeep}}>
-      <AbsoluteFill style={{transform: `scale(${push})`}}>
+      <AbsoluteFill style={{transform: `scale(${push * punch})`}}>
         <OffthreadVideo
           src={staticFile(ASSETS.intro)}
           trimBefore={sec(INTRO_TRIM_START)}
@@ -37,6 +44,8 @@ export const IntroScene: React.FC<{durationInFrames: number}> = ({durationInFram
       <AbsoluteFill
         style={{background: 'radial-gradient(120% 70% at 50% 40%, transparent 60%, rgba(8,4,17,0.55) 100%)'}}
       />
+
+      <Hook />
 
       {/* product title pill */}
       <div

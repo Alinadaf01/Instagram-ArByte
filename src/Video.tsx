@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, Audio, Sequence, staticFile} from 'remotion';
+import {AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame} from 'remotion';
 import {linearTiming, TransitionSeries} from '@remotion/transitions';
 import {ASSETS, FPS, MUSIC} from './config';
 import {loadFonts} from './lib/fonts';
@@ -12,6 +12,18 @@ import {TrustScene} from './scenes/TrustScene';
 import {ProgressBar} from './components/ProgressBar';
 import {Subtitles} from './components/Subtitles';
 import {glassPush, zoomFlash} from './components/transitions';
+import {beatAfter, BeatProvider, useBeatPulse} from './lib/beat';
+
+// Whole-frame "camera" punch on every beat (stronger on downbeats) once the
+// motion-graphics part starts, so the edit hits with the music.
+const BeatPunch: React.FC<{from: number; children: React.ReactNode}> = ({from, children}) => {
+  const {beat, down} = useBeatPulse(0, 7);
+  const frameT = useCurrentFrame() / FPS;
+  const k = frameT >= from ? 1 : 0;
+  return (
+    <AbsoluteFill style={{transform: `scale(${1 + k * (beat * 0.008 + down * 0.018)})`}}>{children}</AbsoluteFill>
+  );
+};
 
 loadFonts();
 
@@ -57,8 +69,10 @@ export const ArbyteReel: React.FC<VideoProps> = ({timeline: tl, musicDrop, hasMu
   const musicDelay = Math.max(0, sec(-offset));
 
   return (
+    <BeatProvider beats={tl.beats} downbeats={tl.downbeats}>
     <BassProvider enabled={hasMusic} musicStartFrame={musicDelay} musicTrimFrames={musicTrim}>
       <AbsoluteFill style={{background: '#080411', fontFamily: "'Vazirmatn', sans-serif"}}>
+        <BeatPunch from={tl.voStart}>
         <TransitionSeries>
           <TransitionSeries.Sequence durationInFrames={durations[0]}>
             <IntroScene durationInFrames={durations[0]} />
@@ -83,9 +97,10 @@ export const ArbyteReel: React.FC<VideoProps> = ({timeline: tl, musicDrop, hasMu
             />
           </TransitionSeries.Sequence>
         </TransitionSeries>
+        </BeatPunch>
 
         <ProgressBar bounds={tl.bounds} />
-        <Subtitles words={tl.words} hideFrom={tl.ctaStart} />
+        <Subtitles words={tl.words} showFrom={beatAfter(tl.beats, 0, 7) + 0.25} hideFrom={tl.ctaStart} />
 
         {/* Voiceover starts exactly at the intro cut */}
         <Sequence from={sec(tl.voStart)} layout="none">
@@ -98,5 +113,6 @@ export const ArbyteReel: React.FC<VideoProps> = ({timeline: tl, musicDrop, hasMu
         ) : null}
       </AbsoluteFill>
     </BassProvider>
+    </BeatProvider>
   );
 };
