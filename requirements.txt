@@ -1,0 +1,4 @@
+faster-whisper>=1.1
+rembg[cpu]>=2.0.60
+pillow
+numpy

@@ -1,0 +1,102 @@
+import React from 'react';
+import {AbsoluteFill, Audio, Sequence, staticFile} from 'remotion';
+import {linearTiming, TransitionSeries} from '@remotion/transitions';
+import {ASSETS, FPS, MUSIC} from './config';
+import {loadFonts} from './lib/fonts';
+import {sceneLayout, sec, Timeline} from './lib/timeline';
+import {BassProvider} from './lib/audio';
+import {IntroScene} from './scenes/IntroScene';
+import {DesignScene} from './scenes/DesignScene';
+import {ConfigScene} from './scenes/ConfigScene';
+import {TrustScene} from './scenes/TrustScene';
+import {ProgressBar} from './components/ProgressBar';
+import {Subtitles} from './components/Subtitles';
+import {glassPush, zoomFlash} from './components/transitions';
+
+loadFonts();
+
+export type VideoProps = {
+  timeline: Timeline;
+  musicDrop: number | null; // seconds into music.mp3 where its drop is
+  hasMusic: boolean;
+  cleanProducts: boolean;
+  hasLogo: boolean;
+  websiteAspect: number;
+};
+
+// Music volume envelope: duck under speech, swell on the drop & in pauses.
+const useMusicVolume = (tl: Timeline) => {
+  const speech = tl.words.map((w) => [w.start - 0.15, w.end + 0.25] as const);
+  const introEnd = tl.voStart;
+  const voEnd = tl.voStart + tl.voDuration;
+  const end = tl.bounds[3];
+  const target = (t: number) => {
+    if (t >= introEnd - 0.15 && t < introEnd + 0.9) return MUSIC.drop;
+    if (t < introEnd) return MUSIC.underSpeech;
+    if (t >= voEnd + 0.2) return MUSIC.drop * Math.max(0, Math.min(1, (end - t) / 0.6));
+    const talking = speech.some(([a, b]) => t >= a && t <= b);
+    return talking ? MUSIC.underSpeech : MUSIC.gaps;
+  };
+  return (f: number) => {
+    // smooth with a ±0.2s box filter so ducking ramps instead of clicking
+    let s = 0;
+    const N = 12;
+    for (let i = -N; i <= N; i++) s += target((f + i) / FPS);
+    return s / (2 * N + 1);
+  };
+};
+
+export const ArbyteReel: React.FC<VideoProps> = ({timeline: tl, musicDrop, hasMusic, cleanProducts, hasLogo, websiteAspect}) => {
+  const {starts, durations, transitionFrames} = sceneLayout(tl);
+  const volume = useMusicVolume(tl);
+  const timing = linearTiming({durationInFrames: transitionFrames});
+
+  // Align the music's own drop with the intro → part B cut.
+  const offset = (musicDrop ?? MUSIC.dropAt) - MUSIC.dropAt; // + → trim music start, − → delay music
+  const musicTrim = Math.max(0, sec(offset));
+  const musicDelay = Math.max(0, sec(-offset));
+
+  return (
+    <BassProvider enabled={hasMusic} musicStartFrame={musicDelay} musicTrimFrames={musicTrim}>
+      <AbsoluteFill style={{background: '#080411', fontFamily: "'Vazirmatn', sans-serif"}}>
+        <TransitionSeries>
+          <TransitionSeries.Sequence durationInFrames={durations[0]}>
+            <IntroScene durationInFrames={durations[0]} />
+          </TransitionSeries.Sequence>
+          <TransitionSeries.Transition presentation={zoomFlash()} timing={timing} />
+          <TransitionSeries.Sequence durationInFrames={durations[1]}>
+            <DesignScene start={starts[1]} cues={tl.cues.design} clean={cleanProducts} />
+          </TransitionSeries.Sequence>
+          <TransitionSeries.Transition presentation={glassPush()} timing={timing} />
+          <TransitionSeries.Sequence durationInFrames={durations[2]}>
+            <ConfigScene start={starts[2]} cues={tl.cues.config} />
+          </TransitionSeries.Sequence>
+          <TransitionSeries.Transition presentation={glassPush()} timing={timing} />
+          <TransitionSeries.Sequence durationInFrames={durations[3]}>
+            <TrustScene
+              start={starts[3]}
+              cues={tl.cues.trust}
+              ctaStart={tl.ctaStart}
+              websiteAspect={websiteAspect}
+              hasLogo={hasLogo}
+              accent={tl.accent}
+            />
+          </TransitionSeries.Sequence>
+        </TransitionSeries>
+
+        <ProgressBar bounds={tl.bounds} />
+        <Subtitles words={tl.words} hideFrom={tl.ctaStart} />
+
+        {/* Voiceover starts exactly at the intro cut */}
+        <Sequence from={sec(tl.voStart)} layout="none">
+          <Audio src={staticFile(ASSETS.voiceover)} trimBefore={sec(tl.voLeadIn)} />
+        </Sequence>
+        {hasMusic ? (
+          <Sequence from={musicDelay} layout="none">
+            <Audio src={staticFile(ASSETS.music)} trimBefore={musicTrim} volume={(f) => volume(f + musicDelay)} />
+          </Sequence>
+        ) : null}
+      </AbsoluteFill>
+    </BassProvider>
+  );
+};
