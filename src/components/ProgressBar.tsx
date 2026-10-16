@@ -56,7 +56,7 @@ export const ProgressBar: React.FC<{bounds: [number, number, number, number]}> =
             </div>
             <div
               style={{
-                fontSize: 23,
+                fontSize: 26,
                 fontWeight: active ? 800 : 700,
                 color: active ? COLORS.white : done ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.45)',
                 textAlign: 'center',

@@ -2,7 +2,7 @@
 
 Transcribes
   * voiceover.m4a                      (times in seconds of the file)
-  * intro.mp4 between 1.2s and 12.4s   (times re-based to the trimmed intro)
+  * intro.mp4 between 0s and 12.4s     (times re-based to the trimmed intro)
 with faster-whisper (large-v3, word_timestamps=True).
 
 Usage:  python scripts/transcribe.py [--model large-v3] [--device cpu]
@@ -13,13 +13,13 @@ only the "word" text matters for subtitles, the timings stay as they are.
 import argparse
 import json
 import subprocess
-import tempfile
 from pathlib import Path
 
+import numpy as np
 from faster_whisper import WhisperModel
 
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
-INTRO_START, INTRO_END = 1.2, 12.4
+INTRO_START, INTRO_END = 0.0, 12.4
 
 PROMPT = (
     "سلام، امروز می‌خوایم سرفیس پرو ۷ پلاس مایکروسافت رو با هم بررسی کنیم. "
@@ -29,21 +29,21 @@ PROMPT = (
 )
 
 
-def to_wav(src: Path, start: float | None = None, end: float | None = None) -> Path:
-    out = Path(tempfile.mkstemp(suffix=".wav")[1])
-    cmd = ["ffmpeg", "-v", "error", "-y"]
+def to_wav(src: Path, start: float | None = None, end: float | None = None) -> np.ndarray:
+    """Decode to 16kHz mono float32 with ffmpeg (avoids PyAV version issues)."""
+    cmd = ["ffmpeg", "-v", "error"]
     if start is not None:
         cmd += ["-ss", str(start)]
     if end is not None:
         cmd += ["-to", str(end)] if start is None else ["-t", str(end - start)]
-    cmd += ["-i", str(src), "-vn", "-ac", "1", "-ar", "16000", str(out)]
-    subprocess.run(cmd, check=True)
-    return out
+    cmd += ["-i", str(src), "-vn", "-ac", "1", "-ar", "16000", "-f", "f32le", "-"]
+    raw = subprocess.run(cmd, check=True, capture_output=True).stdout
+    return np.frombuffer(raw, dtype=np.float32).copy()
 
 
-def transcribe(model: WhisperModel, wav: Path):
+def transcribe(model: WhisperModel, audio: np.ndarray):
     segments, info = model.transcribe(
-        str(wav),
+        audio,
         language="fa",
         word_timestamps=True,
         vad_filter=True,

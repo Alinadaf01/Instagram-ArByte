@@ -104,10 +104,11 @@ export const buildTimeline = (
     .filter((w) => w.end > 0);
   const introWords = (ts?.intro?.words ?? []).filter((w) => w.end > 0 && w.start < INTRO_DURATION);
 
-  const gaps: [number, number][] =
-    voWords.length > 6
-      ? voWords.slice(0, -1).map((w, i) => [w.end, voWords[i + 1].start] as [number, number])
-      : (analysis?.voPauses ?? []).map(([a, b]) => [a - lead, b - lead] as [number, number]);
+  // candidate split points: gaps between words + measured silences
+  const gaps: [number, number][] = [
+    ...voWords.slice(0, -1).map((w, i) => [w.end, voWords[i + 1].start] as [number, number]),
+    ...(analysis?.voPauses ?? []).map(([a, b]) => [a - lead, b - lead] as [number, number]),
+  ].filter(([a, b]) => b - a > 0.05);
 
   let s1: number;
   let s2: number;
@@ -124,7 +125,6 @@ export const buildTimeline = (
   const bounds: [number, number, number, number] = [voStart, voStart + s1, voStart + s2, end];
   const [b0, b1, b2] = bounds;
   const voEnd = voStart + voDuration;
-  const ctaStart = end - CTA_SEC;
 
   const words: Word[] = [
     ...introWords,
@@ -136,32 +136,32 @@ export const buildTimeline = (
     weight: findCue(words, b0, b1, CUES.design.weight, b0 + 1.6),
     touch: findCue(words, b0, b1, CUES.design.touch, b0 + 2.4),
   };
-  const config = {
-    cpu: findCue(words, b1, b2, CUES.config.cpu, b1 + 0.6),
-    ram: findCue(words, b1, b2, CUES.config.ram),
-    ssd: findCue(words, b1, b2, CUES.config.ssd),
-    consult: findCue(words, b1, b2, CUES.config.consult),
-  };
-  config.ram = Math.max(config.ram, config.cpu + 1.6);
-  config.ssd = Math.max(config.ssd, config.ram + 1.4);
-  config.consult = Math.min(Math.max(config.consult, config.ssd + 1.4), b2 - 1.2);
+  const c = CUES.config;
+  const cpu = findCue(words, b1, b2, c.cpu, b1 + 0.6);
+  const cpu2 = Math.max(findCue(words, b1, b2, c.cpu2, cpu + 0.5), cpu + 1.0);
+  const ram = Math.max(findCue(words, b1, b2, c.ram, cpu2 + 0.3), cpu2 + 0.6);
+  const ram2 = Math.max(findCue(words, b1, b2, c.ram2, ram + 0.2), ram + 0.5);
+  const ssd = Math.max(findCue(words, b1, b2, c.ssd, ram2 + 0.2), ram2 + 0.5);
+  const ssd128 = Math.max(findCue(words, b1, b2, c.ssd128, ssd), ssd + 0.3);
+  const ssd512 = Math.max(findCue(words, b1, b2, c.ssd512, ssd128 + 0.3), ssd128 + 0.6);
+  const consult = Math.min(Math.max(findCue(words, b1, b2, c.consult, ssd512 + 0.4), ssd512 + 0.8), b2 - 1.2);
+  const config = {cpu, cpu2, ram, ram2, ssd, ssd128, ssd512, consult};
 
-  // second music drop → accent / website reveal
+  // second music drop → glow accent wherever it lands
   const drop = analysis?.musicDrop ?? null;
   const accent =
     drop !== null && analysis?.musicDrop2 ? analysis.musicDrop2 - (drop - MUSIC.dropAt) : null;
 
-  const trustEnd = Math.min(voEnd, ctaStart);
-  const trust = {
-    torob: findCue(words, b2, trustEnd, CUES.trust.torob),
-    emalls: findCue(words, b2, trustEnd, CUES.trust.emalls),
-    years: findCue(words, b2, trustEnd, CUES.trust.years),
-    website: findCue(words, b2, trustEnd, CUES.trust.website, b2 + 2.5),
-  };
-  trust.emalls = Math.max(trust.emalls, trust.torob + 0.5);
-  trust.years = Math.max(trust.years, trust.emalls + 0.6);
-  if (accent !== null && Math.abs(accent - trust.website) < 3) trust.website = accent;
-  trust.website = Math.min(Math.max(trust.website, trust.years + 2.2), ctaStart - 1.5);
+  const t = CUES.trust;
+  // CTA starts when you say «کلمه سرفیس رو کامنت کنید», at most CTA_SEC before the end
+  const cta = Math.min(findCue(words, b2 + 4, voEnd, t.cta), end - CTA_SEC);
+  const years = findCue(words, b2, cta, t.years, b2 + 0.8);
+  const torob = findCue(words, b2, cta, t.torob, years);
+  const emalls = Math.max(findCue(words, b2, cta, t.emalls, torob), torob + 0.25);
+  const namad = Math.max(findCue(words, b2, cta, t.namad, emalls), emalls + 0.3);
+  const website = Math.min(Math.max(findCue(words, b2, cta, t.website, namad + 1), namad + 2), cta - 1.2);
+  const trust = {years, torob, emalls, namad, website, cta};
+  const ctaStart = cta;
 
   return {
     durationInFrames: sec(end),

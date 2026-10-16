@@ -8,7 +8,7 @@ import {Background} from '../components/Background';
 import {Glass, NeonText} from '../components/Glass';
 import {useBass} from '../lib/audio';
 
-type Cues = {torob: number; emalls: number; years: number; website: number};
+type Cues = {years: number; torob: number; emalls: number; namad: number; website: number};
 type Focus = {x: number; y: number; w: number; h: number; zoom: number};
 
 const PHONE_W = 400;
@@ -135,11 +135,16 @@ const TrustPart: React.FC<{cues: Cues; L: (s: number) => number}> = ({cues, L}) 
   const torob = L(cues.torob);
   const emalls = L(cues.emalls);
   const years = L(cues.years);
-  const pT = pop(frame, torob);
-  const pE = pop(frame, emalls);
+  const namad = L(cues.namad);
+  // phones slide in with the scene; «چهار سال» → magnifier; «ترب» / «ایمالز» → that phone pulses
+  const pT = pop(frame, 8);
+  const pE = pop(frame, 18);
   const pL = pop(frame, years);
-  const pB = pop(frame, years + 36);
+  const pB = pop(frame, namad);
   const hl = interpolate(frame - years, [0, 20], [0, 1], clamp);
+  const pulse = (at: number) => interpolate(frame - at, [0, 6, 30], [0, 1, 0], clamp);
+  const pulseT = pulse(torob);
+  const pulseE = pulse(emalls);
   return (
     <AbsoluteFill style={{perspective: 1600}}>
       <div dir="rtl" style={{position: 'absolute', top: 290, left: 0, right: 0, textAlign: 'center', opacity: pop(frame, 4)}}>
@@ -153,11 +158,11 @@ const TrustPart: React.FC<{cues: Cues; L: (s: number) => number}> = ({cues, L}) 
           position: 'absolute',
           right: 40,
           top: 390 + bob(frame, 8, 0.04),
-          transform: `translateX(${(1 - pT) * 600}px) rotateY(-22deg) rotateZ(2deg) scale(${0.92})`,
+          transform: `translateX(${(1 - pT) * 600}px) rotateY(-22deg) rotateZ(2deg) scale(${0.92 + pulseT * 0.06})`,
           opacity: pT,
         }}
       >
-        <Phone src={ASSETS.torob} focus={TOROB_FOCUS} highlight={hl} label="ترب" />
+        <Phone src={ASSETS.torob} focus={TOROB_FOCUS} highlight={Math.min(1, hl + pulseT)} label="ترب" />
       </div>
       {/* Emalls (left) */}
       <div
@@ -165,14 +170,14 @@ const TrustPart: React.FC<{cues: Cues; L: (s: number) => number}> = ({cues, L}) 
           position: 'absolute',
           left: 40,
           top: 410 + bob(frame, 8, 0.04, 2),
-          transform: `translateX(${(1 - pE) * -600}px) rotateY(22deg) rotateZ(-2deg) scale(${0.92})`,
+          transform: `translateX(${(1 - pE) * -600}px) rotateY(22deg) rotateZ(-2deg) scale(${0.92 + pulseE * 0.06})`,
           opacity: pE,
         }}
       >
-        <Phone src={ASSETS.emalls} focus={EMALLS_FOCUS} highlight={hl} label="ایمالز" />
+        <Phone src={ASSETS.emalls} focus={EMALLS_FOCUS} highlight={Math.min(1, hl + pulseE)} label="ایمالز" />
       </div>
       {frame >= years ? <Lens src={ASSETS.torob} focus={TOROB_FOCUS} p={pL} /> : null}
-      {frame >= years + 36 ? (
+      {frame >= namad ? (
         <div
           style={{
             position: 'absolute',
@@ -365,6 +370,22 @@ const CommentCTA: React.FC<{at: number; hasLogo: boolean}> = ({at, hasLogo}) => 
   );
 };
 
+// Neon bloom on the music's second drop
+const AccentFlash: React.FC<{at: number}> = ({at}) => {
+  const frame = useCurrentFrame();
+  const f = interpolate(frame - at, [0, 4, 30], [0, 1, 0], clamp);
+  if (f <= 0) return null;
+  return (
+    <AbsoluteFill
+      style={{
+        background: 'radial-gradient(circle at 50% 45%, rgba(224,170,255,0.5), rgba(157,78,221,0.25) 40%, transparent 75%)',
+        opacity: f,
+        mixBlendMode: 'screen',
+      }}
+    />
+  );
+};
+
 export const TrustScene: React.FC<{
   start: number;
   cues: Cues;
@@ -389,6 +410,7 @@ export const TrustScene: React.FC<{
       ) : null}
       {frame >= web - 6 ? <WebsitePart aspect={websiteAspect} hasLogo={hasLogo} at={web} dim={dim} accent={accent === null ? null : L(accent)} /> : null}
       {frame >= cta ? <CommentCTA at={cta} hasLogo={hasLogo} /> : null}
+      {accent !== null && frame < web - 6 ? <AccentFlash at={L(accent)} /> : null}
     </AbsoluteFill>
   );
 };

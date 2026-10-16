@@ -41,16 +41,19 @@ export const ASSETS = {
 };
 
 // intro.mp4 trim (seconds in the source file)
-export const INTRO_TRIM_START = 1.2;
+// Speech starts at 0s (you walk in while talking) — starting later cut the
+// first sentence mid-word, so the whole opening is kept.
+export const INTRO_TRIM_START = 0;
 export const INTRO_TRIM_END = 12.4;
-export const INTRO_DURATION = INTRO_TRIM_END - INTRO_TRIM_START; // 11.2s
+export const INTRO_DURATION = INTRO_TRIM_END - INTRO_TRIM_START; // 12.4s
 
 // Floating spec badges in the intro (seconds in the FINAL video)
 export const INTRO_BADGES = [
-  {at: 4.1, label: 'پردازنده', value: 'Intel Core i7-1165G7', icon: 'cpu'},
-  {at: 6.0, label: 'گرافیک', value: 'Intel Iris Xe Graphics', icon: 'zap'},
-  {at: 7.8, label: 'حافظه', value: '256GB SSD', icon: 'disk'},
-  {at: 9.2, label: 'رم', value: '16GB RAM', icon: 'ram'},
+  // synced to the spoken words (timestamps.json)
+  {at: 4.75, label: 'پردازنده', value: 'Intel Core i7-1165G7', icon: 'cpu'},
+  {at: 6.85, label: 'گرافیک', value: 'Intel Iris Xe Graphics', icon: 'zap'},
+  {at: 8.55, label: 'حافظه', value: '256GB SSD', icon: 'disk'},
+  {at: 10.3, label: 'رم', value: '16GB RAM', icon: 'ram'},
 ] as const;
 
 // Which side of the frame the intro badges float on. Right keeps them off
@@ -112,15 +115,21 @@ export const CUES = {
     touch: {words: ['تاچ', 'لمسی', '2k', 'دوکا', 'صفحه', 'نمایشگر'], fallback: 0.65},
   },
   config: {
-    cpu: {words: ['پردازنده', 'i5', 'i7', 'core', 'کور', 'سی‌پی‌یو'], fallback: 0.08},
-    ram: {words: ['رم'], fallback: 0.38},
-    ssd: {words: ['حافظه', 'ssd', 'اس‌اس‌دی', 'هارد'], fallback: 0.6},
+    cpu: {words: ['i7', 'core', 'پردازنده', 'کور'], fallback: 0.08},
+    cpu2: {words: ['i5'], fallback: 0.3},
+    ram: {words: ['رم', 'رمهای', 'رمها'], fallback: 0.38},
+    ram2: {words: ['16'], fallback: 0.45},
+    ssd: {words: ['حافظه', 'ssd', 'اس‌اس‌دی', 'هارد'], fallback: 0.55},
+    ssd128: {words: ['128'], fallback: 0.58},
+    ssd512: {words: ['512'], fallback: 0.64},
     consult: {words: ['مشاوره', 'کارشناس', 'کارشناسان', 'راهنمایی'], fallback: 0.8},
   },
   trust: {
-    torob: {words: ['ترب'], fallback: 0.05},
-    emalls: {words: ['ایمالز'], fallback: 0.2},
-    years: {words: ['سال', 'سابقه'], fallback: 0.3},
-    website: {words: ['سایت', 'وبسایت', 'آربایت', 'اربایت'], fallback: 0.5},
+    years: {words: ['سال', 'سابقه'], fallback: 0.15},
+    torob: {words: ['ترب'], fallback: 0.25},
+    emalls: {words: ['ایمالز'], fallback: 0.3},
+    namad: {words: ['نماد', 'اینماد'], fallback: 0.35},
+    website: {words: ['سایت', 'وبسایت', 'arbyteir'], fallback: 0.6},
+    cta: {words: ['کلمه', 'کامنت'], fallback: 0.85},
   },
 } as const;

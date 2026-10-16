@@ -8,7 +8,16 @@ import {Background} from '../components/Background';
 import {Glass, NeonText} from '../components/Glass';
 import {useBass} from '../lib/audio';
 
-type Cues = {cpu: number; ram: number; ssd: number; consult: number};
+type Cues = {
+  cpu: number;
+  cpu2: number;
+  ram: number;
+  ram2: number;
+  ssd: number;
+  ssd128: number;
+  ssd512: number;
+  consult: number;
+};
 
 const Label: React.FC<{icon: React.ReactNode; title: string; sub?: string}> = ({icon, title, sub}) => (
   <div dir="rtl" style={{display: 'flex', alignItems: 'center', gap: 14}}>
@@ -109,8 +118,12 @@ export const ConfigScene: React.FC<{start: number; cues: Cues}> = ({start, cues}
   const bass = useBass();
   const L = (s: number) => sec(s) - start;
   const cpu = L(cues.cpu);
+  const cpu2 = L(cues.cpu2);
   const ram = L(cues.ram);
-  const ssd = L(cues.ssd);
+  const ram2 = L(cues.ram2);
+  const s128 = L(cues.ssd128);
+  const s512 = L(cues.ssd512);
+  const s256 = Math.round((s128 + s512) / 2);
   const consult = L(cues.consult);
   const sw = (at: number) => spring({frame: frame - at, fps: FPS, config: {damping: 14, stiffness: 120}});
 
@@ -121,14 +134,15 @@ export const ConfigScene: React.FC<{start: number; cues: Cues}> = ({start, cues}
   const cCon = pop(frame, consult - 6);
 
   // states
-  const i5On = sw(cpu) * (1 - sw(cpu + 60));
-  const i7On = sw(cpu + 60);
-  const knob = frame < cpu ? 0 : sw(cpu + 60); // 0 = i5 (right), 1 = i7 (left)
-  const r8 = sw(ram) * (1 - sw(ram + 48));
-  const r16 = sw(ram + 48);
-  const s1 = sw(ssd);
-  const s2 = sw(ssd + 26);
-  const s3 = sw(ssd + 52);
+  // «نسخه Core i7» → «اقتصادی‌تر Core i5»
+  const i7On = sw(cpu) * (1 - sw(cpu2));
+  const i5On = sw(cpu2);
+  const knob = 1 - sw(cpu2); // 1 = i7 (left), 0 = i5 (right)
+  const r8 = sw(ram) * (1 - sw(ram2));
+  const r16 = sw(ram2);
+  const s1 = sw(s128);
+  const s2 = sw(s256);
+  const s3 = sw(s512);
   const ring = Math.sin(frame * 0.9) * interpolate((frame - consult) % 90, [0, 30, 31], [10, 0, 0], clamp);
 
   const card = (p: number): React.CSSProperties => ({
@@ -147,7 +161,7 @@ export const ConfigScene: React.FC<{start: number; cues: Cues}> = ({start, cues}
 
       {/* Processor */}
       <div style={{position: 'absolute', left: 44, top: 420, width: 992, height: 250, ...card(cCpu)}}>
-        <Glass radius={44} style={{width: '100%', height: '100%'}} glow={i7On * 0.4}>
+        <Glass radius={44} style={{width: '100%', height: '100%'}} glow={Math.max(i7On, i5On) * 0.4}>
           <div style={{position: 'absolute', right: 34, top: 22}}>
             <Label icon={<Cpu size={34} color="#fff" />} title="پردازنده" sub="نسل ۱۱ اینتل" />
           </div>
@@ -274,13 +288,13 @@ export const ConfigScene: React.FC<{start: number; cues: Cues}> = ({start, cues}
 
       <PointerHand
         taps={[
-          {at: cpu, to: T.i5},
-          {at: cpu + 60, to: T.i7},
+          {at: cpu, to: T.i7},
+          {at: cpu2, to: T.i5},
           {at: ram, to: T.r8},
-          {at: ram + 48, to: T.r16},
-          {at: ssd, to: T.s128},
-          {at: ssd + 26, to: T.s256},
-          {at: ssd + 52, to: T.s512},
+          {at: ram2, to: T.r16},
+          {at: s128, to: T.s128},
+          {at: s256, to: T.s256},
+          {at: s512, to: T.s512},
           {at: consult + 10, to: T.consult},
         ]}
       />
