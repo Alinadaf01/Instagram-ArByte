@@ -26,17 +26,16 @@ export const SPRING_SOFT = {damping: 20, stiffness: 90, mass: 1};
 
 export const ASSETS = {
   intro: 'media/intro.mp4', // H.264 1080x1920 proxy of intro.mp4 (scripts/prepare_media.sh)
-  voiceover: 'voiceover.m4a',
+  voiceover: 'media/voiceover.wav', // cleaned, normalised & edited (scripts/build_audio.py)
+  introVoice: 'media/intro-voice.wav', // intro camera audio, cleaned & normalised
   website: 'media/website.mp4',
-  music: 'music.mp3',
+  music: 'media/music.mp3', // loudness-normalised music.mp3
   logo: 'logo.png',
   logoClean: 'logo-clean.png', // logo with the black background keyed out
   surfaceFront: 'surface-front.png',
   surfaceSide: 'surface-side.png',
   surfaceBack: 'surface-back.png',
-  torob: 'torob.jpg',
-  emalls: 'emalls.jpg',
-  timestamps: 'timestamps.json',
+  timestamps: 'edit.json', // word timings re-timed to the edited voiceover
   audioAnalysis: 'audio-analysis.json',
 };
 
@@ -62,7 +61,7 @@ export const INTRO_BADGE_SIDE: 'left' | 'right' = 'right';
 
 // Manual override of voiceover part splits (seconds from VO start, after the
 // lead-in silence is trimmed). null = auto-detect from word gaps / pauses.
-export const VO_SPLITS_OVERRIDE: [number, number] | null = null;
+export const VO_SPLITS_OVERRIDE: [number, number] | null = [14.76, 25.6];
 
 // Scene transition length (seconds)
 export const TRANSITION_SEC = 0.5;
@@ -75,18 +74,15 @@ export const CTA_SEC = 2.5;
 
 // Music levels
 export const MUSIC = {
+  // music.mp3 is normalised to ≈-15 LUFS and the voice to ≈-19 LUFS, so
+  // 0.12 keeps the bed ~14 dB under speech.
   underSpeech: 0.12,
-  drop: 0.45,
-  gaps: 0.26,
+  drop: 0.5,
+  gaps: 0.24,
   // Where in the final video the beat drop should land (intro → part B cut)
   dropAt: INTRO_DURATION,
 };
 
-// Magnifier focus on the Torob / Emalls screenshots (0..1 of image size).
-// Pointed at the "۴ سال و ۳ ماه" text — adjust after looking at the images.
-// w/h = size of the highlight box as a fraction of the screenshot width.
-export const TOROB_FOCUS = {x: 0.262, y: 0.61, w: 0.24, h: 0.035, zoom: 2.6};
-export const EMALLS_FOCUS = {x: 0.83, y: 0.822, w: 0.3, h: 0.035, zoom: 3.0};
 
 export const STAGES = ['۱. معرفی', '۲. طراحی', '۳. کانفیگ‌ها', '۴. خرید از آربایت'];
 
@@ -96,7 +92,6 @@ export const CTA = {
   word: 'سرفیس',
 };
 
-export const TRUST_BADGE = '۴ سال سابقه رسمی در ترب و ایمالز + اینماد';
 
 // Words that get the purple glow highlight in subtitles (normalised form)
 export const KEYWORDS = [
@@ -122,14 +117,11 @@ export const CUES = {
     ssd: {words: ['حافظه', 'ssd', 'اس‌اس‌دی', 'هارد'], fallback: 0.55},
     ssd128: {words: ['128'], fallback: 0.58},
     ssd512: {words: ['512'], fallback: 0.64},
-    consult: {words: ['مشاوره', 'کارشناس', 'کارشناسان', 'راهنمایی'], fallback: 0.8},
   },
-  trust: {
-    years: {words: ['سال', 'سابقه'], fallback: 0.15},
-    torob: {words: ['ترب'], fallback: 0.25},
-    emalls: {words: ['ایمالز'], fallback: 0.3},
-    namad: {words: ['نماد', 'اینماد'], fallback: 0.35},
-    website: {words: ['سایت', 'وبسایت', 'arbyteir'], fallback: 0.6},
-    cta: {words: ['کلمه', 'کامنت'], fallback: 0.85},
+  buy: {
+    consult: {words: ['کارشناسای', 'کارشناس', 'کارشناسان', 'مشاوره'], fallback: 0.02},
+    buy: {words: ['بخرید', 'خرید'], fallback: 0.4},
+    website: {words: ['سایت', 'وبسایت', 'arbyteir'], fallback: 0.55},
+    cta: {words: ['کلمه', 'کامنت'], fallback: 0.8},
   },
 } as const;

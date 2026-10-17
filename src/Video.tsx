@@ -8,7 +8,7 @@ import {BassProvider} from './lib/audio';
 import {IntroScene} from './scenes/IntroScene';
 import {DesignScene} from './scenes/DesignScene';
 import {ConfigScene} from './scenes/ConfigScene';
-import {TrustScene} from './scenes/TrustScene';
+import {BuyScene} from './scenes/BuyScene';
 import {ProgressBar} from './components/ProgressBar';
 import {Subtitles} from './components/Subtitles';
 import {glassPush, zoomFlash} from './components/transitions';
@@ -87,9 +87,9 @@ export const ArbyteReel: React.FC<VideoProps> = ({timeline: tl, musicDrop, hasMu
           </TransitionSeries.Sequence>
           <TransitionSeries.Transition presentation={glassPush()} timing={timing} />
           <TransitionSeries.Sequence durationInFrames={durations[3]}>
-            <TrustScene
+            <BuyScene
               start={starts[3]}
-              cues={tl.cues.trust}
+              cues={tl.cues.buy}
               ctaStart={tl.ctaStart}
               websiteAspect={websiteAspect}
               hasLogo={hasLogo}
@@ -102,6 +102,11 @@ export const ArbyteReel: React.FC<VideoProps> = ({timeline: tl, musicDrop, hasMu
         <ProgressBar bounds={tl.bounds} />
         <Subtitles words={tl.words} showFrom={beatAfter(tl.beats, 0, 7) + 0.25} hideFrom={tl.ctaStart} />
 
+        {/* Intro camera voice (cleaned) — fades out right at the 12.4s cut */}
+        <Audio
+          src={staticFile(ASSETS.introVoice)}
+          volume={(f) => Math.max(0, Math.min(1, (sec(tl.voStart) - f) / 4))}
+        />
         {/* Voiceover starts exactly at the intro cut */}
         <Sequence from={sec(tl.voStart)} layout="none">
           <Audio src={staticFile(ASSETS.voiceover)} trimBefore={sec(tl.voLeadIn)} />

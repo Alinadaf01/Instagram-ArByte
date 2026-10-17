@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, interpolate, spring, useCurrentFrame} from 'remotion';
-import {Cpu, HardDrive, Headset, MemoryStick, Pointer} from 'lucide-react';
+import {Cpu, HardDrive, MemoryStick, Pointer} from 'lucide-react';
 import {COLORS, FPS} from '../config';
 import {clamp, pop} from '../lib/anim';
 import {sec} from '../lib/timeline';
@@ -16,7 +16,6 @@ type Cues = {
   ssd: number;
   ssd128: number;
   ssd512: number;
-  consult: number;
 };
 
 const Label: React.FC<{icon: React.ReactNode; title: string; sub?: string}> = ({icon, title, sub}) => (
@@ -74,7 +73,6 @@ const T = {
   s128: [144, 900],
   s256: [284, 880],
   s512: [424, 860],
-  consult: [540, 1090],
 } as const;
 
 const PointerHand: React.FC<{taps: {at: number; to: readonly [number, number]}[]}> = ({taps}) => {
@@ -124,14 +122,12 @@ export const ConfigScene: React.FC<{start: number; cues: Cues}> = ({start, cues}
   const s128 = L(cues.ssd128);
   const s512 = L(cues.ssd512);
   const s256 = Math.round((s128 + s512) / 2);
-  const consult = L(cues.consult);
   const sw = (at: number) => spring({frame: frame - at, fps: FPS, config: {damping: 14, stiffness: 120}});
 
   const head = pop(frame, 6);
   const cCpu = pop(frame, 14);
   const cRam = pop(frame, 22);
   const cSsd = pop(frame, 30);
-  const cCon = pop(frame, consult - 6);
 
   // states
   // «نسخه Core i7» → «اقتصادی‌تر Core i5»
@@ -143,7 +139,6 @@ export const ConfigScene: React.FC<{start: number; cues: Cues}> = ({start, cues}
   const s1 = sw(s128);
   const s2 = sw(s256);
   const s3 = sw(s512);
-  const ring = Math.sin(frame * 0.9) * interpolate((frame - consult) % 90, [0, 30, 31], [10, 0, 0], clamp);
 
   const card = (p: number): React.CSSProperties => ({
     transform: `translateY(${(1 - p) * 160}px) scale(${0.85 + p * 0.15})`,
@@ -258,34 +253,6 @@ export const ConfigScene: React.FC<{start: number; cues: Cues}> = ({start, cues}
         </Glass>
       </div>
 
-      {/* Free consultation badge */}
-      {frame >= consult - 6 ? (
-        <div style={{position: 'absolute', left: 44, right: 44, top: 1030, height: 132, ...card(cCon)}}>
-          <Glass radius={999} style={{width: '100%', height: '100%'}} glow={0.6} tint="rgba(157,78,221,0.35)">
-            <div dir="rtl" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22, height: '100%'}}>
-              <div
-                style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: 99,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: COLORS.green,
-                  boxShadow: `0 0 ${26 + bass * 30}px rgba(46,229,157,0.85)`,
-                  transform: `rotate(${ring}deg)`,
-                }}
-              >
-                <Headset size={50} color="#06281a" strokeWidth={2.4} />
-              </div>
-              <span style={{fontSize: 42, fontWeight: 900, color: '#fff', textShadow: '0 0 18px rgba(199,125,255,0.8)'}}>
-                مشاوره رایگان با کارشناسان آربایت
-              </span>
-            </div>
-          </Glass>
-        </div>
-      ) : null}
-
       <PointerHand
         taps={[
           {at: cpu, to: T.i7},
@@ -295,7 +262,6 @@ export const ConfigScene: React.FC<{start: number; cues: Cues}> = ({start, cues}
           {at: s128, to: T.s128},
           {at: s256, to: T.s256},
           {at: s512, to: T.s512},
-          {at: consult + 10, to: T.consult},
         ]}
       />
     </AbsoluteFill>

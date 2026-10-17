@@ -37,13 +37,15 @@ const calculateMetadata: CalculateMetadataFunction<VideoProps> = async ({props})
       .then((m) => m.dimensions)
       .catch(() => null),
   ]);
-  const timeline = buildTimeline(ts, voDur, analysis);
+  // edit.json is already trimmed/cut → no lead-in, pauses come re-timed with it
+  const edited: AudioAnalysis | null = analysis && {...analysis, voLeadIn: 0, voPauses: ts?.voiceover?.pauses ?? []};
+  const timeline = buildTimeline(ts, voDur, edited);
   return {
     durationInFrames: timeline.durationInFrames,
     props: {
       ...props,
       timeline,
-      musicDrop: analysis?.musicDrop ?? null,
+      musicDrop: edited?.musicDrop ?? null,
       hasMusic,
       cleanProducts,
       hasLogo,

@@ -30,8 +30,8 @@ export const IntroScene: React.FC<{durationInFrames: number}> = ({durationInFram
           src={staticFile(ASSETS.intro)}
           trimBefore={sec(INTRO_TRIM_START)}
           trimAfter={sec(INTRO_TRIM_START) + durationInFrames + 2}
-          // keep the voice up to the 12.4s cut, mute the overlap tail
-          volume={(f) => interpolate(f, [introEnd - 3, introEnd], [1, 0], clamp)}
+          // the voice plays from the cleaned media/intro-voice.wav instead
+          muted
           style={{width: '100%', height: '100%', objectFit: 'cover'}}
         />
       </AbsoluteFill>

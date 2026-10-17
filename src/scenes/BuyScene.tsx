@@ -1,200 +1,141 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, OffthreadVideo, Sequence, staticFile, useCurrentFrame} from 'remotion';
-import {BadgeCheck, Globe, Heart, Lock, Search, Send, User} from 'lucide-react';
-import {ASSETS, COLORS, CTA, EMALLS_FOCUS, TOROB_FOCUS, TRUST_BADGE} from '../config';
+import {Globe, Headset, Heart, Lock, Send, ShoppingBag, User} from 'lucide-react';
+import {ASSETS, COLORS, CTA} from '../config';
 import {bob, clamp, pop} from '../lib/anim';
 import {sec} from '../lib/timeline';
 import {Background} from '../components/Background';
 import {Glass, NeonText} from '../components/Glass';
 import {useBass} from '../lib/audio';
 
-type Cues = {years: number; torob: number; emalls: number; namad: number; website: number};
-type Focus = {x: number; y: number; w: number; h: number; zoom: number};
+type Cues = {consult: number; buy: number; website: number; cta: number};
 
-const PHONE_W = 400;
-const PHONE_H = 800;
-const BEZEL = 14;
-
-const Phone: React.FC<{src: string; focus: Focus; highlight: number; label: string}> = ({src, focus, highlight, label}) => {
-  const innerW = PHONE_W - BEZEL * 2;
+const Bubble: React.FC<{at: number; side: 'user' | 'expert'; children: React.ReactNode}> = ({at, side, children}) => {
+  const frame = useCurrentFrame();
+  if (frame < at) return null;
+  const p = pop(frame, at);
+  const expert = side === 'expert';
   return (
     <div
+      dir="rtl"
       style={{
-        width: PHONE_W,
-        height: PHONE_H,
-        borderRadius: 62,
-        padding: BEZEL,
-        background: 'linear-gradient(145deg, #2a2338, #0d0915)',
-        boxShadow: `0 0 0 2px rgba(224,170,255,0.35), 0 0 ${40 + highlight * 50}px rgba(157,78,221,${0.4 + highlight * 0.4}), 0 40px 90px rgba(0,0,0,0.7)`,
-        position: 'relative',
+        display: 'flex',
+        justifyContent: expert ? 'flex-end' : 'flex-start',
+        transform: `translateY(${(1 - p) * 40}px) scale(${0.7 + p * 0.3})`,
+        transformOrigin: expert ? 'left bottom' : 'right bottom',
+        opacity: Math.min(1, p * 1.5),
       }}
     >
-      <div style={{width: '100%', height: '100%', borderRadius: 50, overflow: 'hidden', position: 'relative', background: '#fff'}}>
-        <div style={{position: 'relative', width: innerW}}>
-          <Img src={staticFile(src)} style={{width: innerW, display: 'block'}} />
-          {/* highlight box around the "۴ سال و ۳ ماه" text */}
+      <div
+        style={{
+          maxWidth: 720,
+          padding: '22px 30px',
+          borderRadius: 34,
+          borderBottomRightRadius: expert ? 34 : 10,
+          borderBottomLeftRadius: expert ? 10 : 34,
+          fontSize: 38,
+          fontWeight: 800,
+          lineHeight: 1.5,
+          color: '#fff',
+          background: expert ? `linear-gradient(135deg, ${COLORS.neon}, #5A189A)` : 'rgba(255,255,255,0.13)',
+          border: `1.5px solid rgba(255,255,255,${expert ? 0.3 : 0.18})`,
+          boxShadow: expert ? '0 0 34px rgba(157,78,221,0.7)' : '0 10px 30px rgba(0,0,0,0.35)',
+          backdropFilter: 'blur(18px)',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const Typing: React.FC<{from: number; to: number}> = ({from, to}) => {
+  const frame = useCurrentFrame();
+  if (frame < from || frame >= to) return null;
+  return (
+    <div style={{display: 'flex', justifyContent: 'flex-end'}}>
+      <div style={{display: 'flex', gap: 10, padding: '22px 30px', borderRadius: 34, background: 'rgba(157,78,221,0.45)'}}>
+        {[0, 1, 2].map((i) => (
           <div
+            key={i}
             style={{
-              position: 'absolute',
-              left: `${focus.x * 100}%`,
-              top: `${focus.y * 100}%`,
-              width: `${focus.w * 100}%`,
-              height: innerW * focus.h * 1.0 + 18,
-              transform: `translate(-50%,-50%) scale(${1.6 - highlight * 0.6})`,
-              opacity: highlight,
-              borderRadius: 16,
-              border: `4px solid rgba(157,78,221,${highlight})`,
-              boxShadow: `0 0 ${30 * highlight}px rgba(157,78,221,${highlight}), inset 0 0 20px rgba(157,78,221,${highlight * 0.4})`,
+              width: 16,
+              height: 16,
+              borderRadius: 99,
+              background: '#fff',
+              opacity: 0.4 + 0.6 * Math.max(0, Math.sin((frame - from) * 0.25 - i * 0.9)),
             }}
           />
-        </div>
-        {/* glass reflection */}
-        <div style={{position: 'absolute', inset: 0, background: 'linear-gradient(125deg, rgba(255,255,255,0.22) 0%, transparent 38%)'}} />
-        {/* dynamic island */}
-        <div style={{position: 'absolute', top: 14, left: '50%', width: 110, height: 32, marginLeft: -55, borderRadius: 99, background: '#000'}} />
-      </div>
-      <div
-        style={{
-          position: 'absolute',
-          bottom: -66,
-          left: 0,
-          right: 0,
-          textAlign: 'center',
-          fontSize: 32,
-          fontWeight: 900,
-          color: '#fff',
-          textShadow: '0 0 16px rgba(199,125,255,0.9)',
-        }}
-      >
-        {label}
+        ))}
       </div>
     </div>
   );
 };
 
-const Lens: React.FC<{src: string; focus: Focus; p: number}> = ({src, focus, p}) => {
-  const R = 190;
-  const W = (PHONE_W - BEZEL * 2) * focus.zoom;
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: 540 - R,
-        top: 560,
-        width: R * 2,
-        height: R * 2,
-        transform: `scale(${p}) rotate(${(1 - p) * -30}deg)`,
-        opacity: Math.min(1, p * 1.4),
-        zIndex: 10,
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          borderRadius: '50%',
-          overflow: 'hidden',
-          position: 'relative',
-          background: '#fff',
-          border: '8px solid rgba(255,255,255,0.9)',
-          boxShadow: '0 0 0 4px #9D4EDD, 0 0 60px rgba(157,78,221,0.95), 0 30px 60px rgba(0,0,0,0.6)',
-        }}
-      >
-        <Img
-          src={staticFile(src)}
-          style={{position: 'absolute', left: R, top: R, width: W, transform: `translate(-${focus.x * 100}%, -${focus.y * 100}%)`}}
-        />
-        <div style={{position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 25%, rgba(255,255,255,0.35), transparent 45%)'}} />
-      </div>
-      <div style={{position: 'absolute', right: -40, bottom: -40, transform: 'rotate(-45deg)'}}>
-        <Search size={96} color="#fff" strokeWidth={2.4} style={{filter: 'drop-shadow(0 0 16px #9D4EDD)'}} />
-      </div>
-      <div style={{position: 'absolute', left: 0, right: 0, bottom: -84, display: 'flex', justifyContent: 'center'}}>
-        <div
-          dir="rtl"
-          style={{
-            padding: '8px 26px',
-            borderRadius: 99,
-            background: `linear-gradient(135deg, ${COLORS.neon}, #6A1FB0)`,
-            fontSize: 40,
-            fontWeight: 900,
-            color: '#fff',
-            boxShadow: '0 0 30px rgba(157,78,221,0.9)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          ۴ سال و ۳ ماه
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const TrustPart: React.FC<{cues: Cues; L: (s: number) => number}> = ({cues, L}) => {
+// «کارشناسای آربایت رایگان راهنمایی‌تون می‌کنن تا دقیقاً مدل مناسب کارتون رو بخرید»
+const ConsultPart: React.FC<{cues: Cues; L: (s: number) => number}> = ({cues, L}) => {
   const frame = useCurrentFrame();
-  const torob = L(cues.torob);
-  const emalls = L(cues.emalls);
-  const years = L(cues.years);
-  const namad = L(cues.namad);
-  // phones slide in with the scene; «چهار سال» → magnifier; «ترب» / «ایمالز» → that phone pulses
-  const pT = pop(frame, 8);
-  const pE = pop(frame, 18);
-  const pL = pop(frame, years);
-  const pB = pop(frame, namad);
-  const hl = interpolate(frame - years, [0, 20], [0, 1], clamp);
-  const pulse = (at: number) => interpolate(frame - at, [0, 6, 30], [0, 1, 0], clamp);
-  const pulseT = pulse(torob);
-  const pulseE = pulse(emalls);
+  const bass = useBass();
+  const c = Math.max(4, L(cues.consult));
+  const buy = L(cues.buy);
+  const head = pop(frame, c);
+  const card = pop(frame, c + 6);
+  const ring = Math.sin(frame * 0.9) * interpolate((frame - c) % 80, [0, 26, 27], [10, 0, 0], clamp);
+  const pBuy = pop(frame, buy);
   return (
-    <AbsoluteFill style={{perspective: 1600}}>
-      <div dir="rtl" style={{position: 'absolute', top: 290, left: 0, right: 0, textAlign: 'center', opacity: pop(frame, 4)}}>
-        <NeonText size={50} weight={900}>
-          خرید مطمئن از آربایت
-        </NeonText>
+    <AbsoluteFill>
+      {/* headline */}
+      <div dir="rtl" style={{position: 'absolute', top: 300, left: 40, right: 40, display: 'flex', justifyContent: 'center', transform: `scale(${0.6 + head * 0.4})`, opacity: Math.min(1, head * 1.5)}}>
+        <Glass radius={999} style={{padding: '18px 34px'}} glow={0.7} tint="rgba(157,78,221,0.35)">
+          <div dir="rtl" style={{display: 'flex', alignItems: 'center', gap: 20}}>
+            <div
+              style={{
+                width: 92,
+                height: 92,
+                borderRadius: 99,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: COLORS.green,
+                boxShadow: `0 0 ${26 + bass * 30}px rgba(46,229,157,0.85)`,
+                transform: `rotate(${ring}deg)`,
+              }}
+            >
+              <Headset size={52} color="#06281a" strokeWidth={2.4} />
+            </div>
+            <div style={{display: 'flex', flexDirection: 'column'}}>
+              <span style={{fontSize: 48, fontWeight: 900, color: '#fff', textShadow: '0 0 18px rgba(199,125,255,0.8)'}}>مشاوره رایگان</span>
+              <span style={{fontSize: 30, fontWeight: 700, color: COLORS.silver}}>با کارشناسان آربایت</span>
+            </div>
+          </div>
+        </Glass>
       </div>
-      {/* Torob (right) */}
-      <div
-        style={{
-          position: 'absolute',
-          right: 40,
-          top: 390 + bob(frame, 8, 0.04),
-          transform: `translateX(${(1 - pT) * 600}px) rotateY(-22deg) rotateZ(2deg) scale(${0.92 + pulseT * 0.06})`,
-          opacity: pT,
-        }}
-      >
-        <Phone src={ASSETS.torob} focus={TOROB_FOCUS} highlight={Math.min(1, hl + pulseT)} label="ترب" />
+
+      {/* chat */}
+      <div style={{position: 'absolute', top: 520, left: 50, right: 50, transform: `translateY(${(1 - card) * 120}px)`, opacity: card}}>
+        <Glass radius={48} style={{padding: '34px 30px'}} glow={0.4}>
+          <div style={{display: 'flex', flexDirection: 'column', gap: 22, minHeight: 400}}>
+            <Bubble at={c + 14} side="user">
+              برای کار من کدوم کانفیگ بهتره؟ 🤔
+            </Bubble>
+            <Typing from={c + 34} to={c + 70} />
+            <Bubble at={c + 70} side="expert">
+              بر اساس کارتون، دقیقاً مدل مناسب رو پیشنهاد می‌دیم ✅
+            </Bubble>
+            <Bubble at={c + 110} side="expert">
+              i5 یا i7 · رم ۸ یا ۱۶ · SSD تا ۵۱۲
+            </Bubble>
+          </div>
+        </Glass>
       </div>
-      {/* Emalls (left) */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 40,
-          top: 410 + bob(frame, 8, 0.04, 2),
-          transform: `translateX(${(1 - pE) * -600}px) rotateY(22deg) rotateZ(-2deg) scale(${0.92 + pulseE * 0.06})`,
-          opacity: pE,
-        }}
-      >
-        <Phone src={ASSETS.emalls} focus={EMALLS_FOCUS} highlight={Math.min(1, hl + pulseE)} label="ایمالز" />
-      </div>
-      {frame >= years ? <Lens src={ASSETS.torob} focus={TOROB_FOCUS} p={pL} /> : null}
-      {frame >= namad ? (
-        <div
-          style={{
-            position: 'absolute',
-            left: 40,
-            right: 40,
-            top: 1250,
-            display: 'flex',
-            justifyContent: 'center',
-            transform: `translateY(${(1 - pB) * 120}px) scale(${0.7 + pB * 0.3})`,
-            opacity: Math.min(1, pB * 1.5),
-            zIndex: 11,
-          }}
-        >
-          <Glass radius={999} style={{padding: '16px 30px'}} glow={0.5} tint="rgba(46,229,157,0.18)">
-            <div dir="rtl" style={{display: 'flex', alignItems: 'center', gap: 14}}>
-              <BadgeCheck size={50} color={COLORS.green} strokeWidth={2.4} style={{filter: 'drop-shadow(0 0 10px rgba(46,229,157,0.9))'}} />
-              <span style={{fontSize: 34, fontWeight: 900, color: '#fff', whiteSpace: 'nowrap'}}>{TRUST_BADGE}</span>
+
+      {/* «بخرید» */}
+      {frame >= buy ? (
+        <div style={{position: 'absolute', top: 1110, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `scale(${0.5 + pBuy * 0.5})`, opacity: Math.min(1, pBuy * 1.5)}}>
+          <Glass radius={999} style={{padding: '16px 36px'}} glow={0.8} tint="rgba(46,229,157,0.2)">
+            <div dir="rtl" style={{display: 'flex', alignItems: 'center', gap: 16}}>
+              <ShoppingBag size={44} color={COLORS.green} strokeWidth={2.4} />
+              <span style={{fontSize: 42, fontWeight: 900, color: '#fff'}}>خرید مطمئن از آربایت</span>
             </div>
           </Glass>
         </div>
@@ -386,7 +327,7 @@ const AccentFlash: React.FC<{at: number}> = ({at}) => {
   );
 };
 
-export const TrustScene: React.FC<{
+export const BuyScene: React.FC<{
   start: number;
   cues: Cues;
   ctaStart: number;
@@ -405,7 +346,7 @@ export const TrustScene: React.FC<{
       <Background />
       {out < 1 ? (
         <AbsoluteFill style={{opacity: 1 - out, transform: `scale(${1 + out * 0.25})`, filter: out > 0 ? `blur(${out * 16}px)` : undefined}}>
-          <TrustPart cues={cues} L={L} />
+          <ConsultPart cues={cues} L={L} />
         </AbsoluteFill>
       ) : null}
       {frame >= web - 6 ? <WebsitePart aspect={websiteAspect} hasLogo={hasLogo} at={web} dim={dim} accent={accent === null ? null : L(accent)} /> : null}

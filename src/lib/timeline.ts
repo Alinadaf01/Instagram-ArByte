@@ -14,7 +14,7 @@ export type Word = {word: string; start: number; end: number};
 // public/timestamps.json — written by scripts/transcribe.py
 export type Timestamps = {
   intro?: {words: Word[]}; // seconds relative to the trimmed intro (final video time)
-  voiceover?: {words: Word[]; duration?: number}; // seconds in voiceover.m4a
+  voiceover?: {words: Word[]; duration?: number; pauses?: [number, number][]}; // seconds in the voiceover file
 };
 
 // public/audio-analysis.json — written by scripts/analyze_audio.py
@@ -42,7 +42,7 @@ export type Timeline = {
   cues: {
     design: Record<keyof typeof CUES.design, number>;
     config: Record<keyof typeof CUES.config, number>;
-    trust: Record<keyof typeof CUES.trust, number>;
+    buy: Record<keyof typeof CUES.buy, number>;
   };
   words: Word[]; // all subtitle words in final-video seconds
 };
@@ -161,7 +161,6 @@ export const buildTimeline = (
   const ssd = Math.max(findCue(words, b1, b2, c.ssd, ram2 + 0.2), ram2 + 0.5);
   const ssd128 = Math.max(findCue(words, b1, b2, c.ssd128, ssd), ssd + 0.3);
   const ssd512 = Math.max(findCue(words, b1, b2, c.ssd512, ssd128 + 0.3), ssd128 + 0.6);
-  const consult = Math.min(Math.max(findCue(words, b1, b2, c.consult, ssd512 + 0.4), ssd512 + 0.8), b2 - 1.2);
   const config = {
     cpu: q(cpu),
     cpu2: q(cpu2),
@@ -170,7 +169,6 @@ export const buildTimeline = (
     ssd: q(ssd),
     ssd128: q(ssd128),
     ssd512: q(ssd512),
-    consult: q(consult),
   };
 
   // second music drop → glow accent wherever it lands
@@ -178,15 +176,13 @@ export const buildTimeline = (
   const accent =
     drop !== null && analysis?.musicDrop2 ? analysis.musicDrop2 - (drop - MUSIC.dropAt) : null;
 
-  const t = CUES.trust;
+  const t = CUES.buy;
   // CTA starts when you say «کلمه سرفیس رو کامنت کنید», at most CTA_SEC before the end
-  const cta = Math.min(findCue(words, b2 + 4, voEnd, t.cta), end - CTA_SEC);
-  const years = findCue(words, b2, cta, t.years, b2 + 0.8);
-  const torob = findCue(words, b2, cta, t.torob, years);
-  const emalls = Math.max(findCue(words, b2, cta, t.emalls, torob), torob + 0.25);
-  const namad = Math.max(findCue(words, b2, cta, t.namad, emalls), emalls + 0.3);
-  const website = Math.min(Math.max(findCue(words, b2, cta, t.website, namad + 1), namad + 2), cta - 1.2);
-  const trust = {years: q(years), torob: q(torob), emalls: q(emalls), namad: q(namad), website: q(website), cta};
+  const cta = Math.min(findCue(words, b2 + 3, voEnd, t.cta), end - CTA_SEC);
+  const consult = findCue(words, b2, cta, t.consult, b2);
+  const buyAt = Math.max(findCue(words, b2, cta, t.buy, consult + 1), consult + 1.2);
+  const website = Math.min(Math.max(findCue(words, b2, cta, t.website, buyAt + 0.3), buyAt + 0.6), cta - 1.2);
+  const buy = {consult: q(consult), buy: q(buyAt), website: q(website), cta};
   const ctaStart = cta;
 
   return {
@@ -199,7 +195,7 @@ export const buildTimeline = (
     accent,
     beats,
     downbeats,
-    cues: {design, config, trust},
+    cues: {design, config, buy},
     words,
   };
 };
