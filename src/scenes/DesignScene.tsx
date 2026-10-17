@@ -10,7 +10,7 @@ import {Background} from '../components/Background';
 import {Glass, NeonText} from '../components/Glass';
 import {useBass} from '../lib/audio';
 
-type Cues = {keyboard: number; weight: number; touch: number};
+type Cues = {keyboard: number; weight: number; touch: number; k2: number};
 
 // One full 360° turn of the real device («طراحی جادویی»), settle on the ¾
 // front for «وزن ۷۷۰ گرم», square up to the front, then on «جدا شدن کیبورد»
@@ -221,6 +221,58 @@ const TouchCard: React.FC<{at: number}> = ({at}) => {
   );
 };
 
+// «کیفیت خیره‌کننده‌ی 2K»: pixel-grid sweep over the tablet screen, a giant
+// 2K slam and the resolution counting up
+const K2Burst: React.FC<{at: number}> = ({at}) => {
+  const frame = useCurrentFrame();
+  const f = frame - at;
+  if (f < 0) return null;
+  const p = pop(frame, at);
+  const slam = interpolate(f, [0, 4, 12], [2.2, 0.9, 1], clamp);
+  const sweep = interpolate(f, [0, 26], [0, 1], clamp);
+  const count = interpolate(f, [4, 34], [0, 1], {...clamp, easing: (t) => 1 - Math.pow(1 - t, 3)});
+  const flash = interpolate(f, [0, 3, 14], [0, 0.7, 0], clamp);
+  return (
+    <AbsoluteFill style={{zIndex: 8, pointerEvents: 'none'}}>
+      {/* pixel grid sweeping across the screen area */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 220,
+          top: 480,
+          width: 640,
+          height: 360,
+          borderRadius: 18,
+          backgroundImage:
+            'linear-gradient(rgba(224,170,255,0.55) 1.5px, transparent 1.5px), linear-gradient(90deg, rgba(224,170,255,0.55) 1.5px, transparent 1.5px)',
+          backgroundSize: `${interpolate(sweep, [0, 1], [60, 10])}px ${interpolate(sweep, [0, 1], [60, 10])}px`,
+          maskImage: `linear-gradient(90deg, transparent ${sweep * 100 - 30}%, #000 ${sweep * 100}%, transparent ${sweep * 100 + 8}%)`,
+          WebkitMaskImage: `linear-gradient(90deg, transparent ${sweep * 100 - 30}%, #000 ${sweep * 100}%, transparent ${sweep * 100 + 8}%)`,
+          mixBlendMode: 'screen',
+        }}
+      />
+      <div style={{position: 'absolute', top: 520, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', transform: `scale(${slam})`, opacity: Math.min(1, p * 2)}}>
+        <div
+          style={{
+            fontSize: 230,
+            fontWeight: 900,
+            lineHeight: 1,
+            color: '#fff',
+            letterSpacing: -6,
+            textShadow: '-6px 0 0 rgba(255,60,200,0.55), 6px 0 0 rgba(60,200,255,0.55), 0 0 40px rgba(199,125,255,1), 0 0 110px rgba(157,78,221,0.9)',
+          }}
+        >
+          2K
+        </div>
+        <div style={{marginTop: 6, fontSize: 46, fontWeight: 900, color: COLORS.neonHot, direction: 'ltr', textShadow: '0 0 18px rgba(199,125,255,0.9), 0 4px 14px rgba(0,0,0,0.7)'}}>
+          {Math.round(2736 * count)} × {Math.round(1824 * count)}
+        </div>
+      </div>
+      {flash > 0 ? <AbsoluteFill style={{background: 'radial-gradient(circle at 50% 35%, rgba(255,255,255,0.9), transparent 60%)', opacity: flash, mixBlendMode: 'screen'}} /> : null}
+    </AbsoluteFill>
+  );
+};
+
 export const DesignScene: React.FC<{start: number; cues: Cues}> = ({start, cues}) => {
   const frame = useCurrentFrame();
   const local = (s: number) => sec(s) - start;
@@ -283,6 +335,7 @@ export const DesignScene: React.FC<{start: number; cues: Cues}> = ({start, cues}
       ) : null}
 
       <TouchRipple at={touchAt} />
+      <K2Burst at={local(cues.k2)} />
       {frame >= local(cues.weight) - 2 ? <WeightGauge at={local(cues.weight)} /> : null}
       {frame >= touchAt - 2 ? <TouchCard at={touchAt} /> : null}
     </AbsoluteFill>

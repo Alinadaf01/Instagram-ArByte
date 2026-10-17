@@ -7,7 +7,7 @@ import {Glass} from '../components/Glass';
 import {SpecIcon} from '../components/Icon';
 import {useBass} from '../lib/audio';
 import {Hook, useHookTimes} from './Hook';
-import {useBeatPulse} from '../lib/beat';
+import {useBeatPulse, useBeats} from '../lib/beat';
 
 export const IntroScene: React.FC<{durationInFrames: number}> = ({durationInFrames}) => {
   const frame = useCurrentFrame();
@@ -21,11 +21,28 @@ export const IntroScene: React.FC<{durationInFrames: number}> = ({durationInFram
   const title = pop(frame, hookOut + 8);
   const {beat} = useBeatPulse(0, 6);
   const punch = frame < hookOut + 10 ? 1 + beat * 0.03 : 1;
+  // multi-cam style jump-zooms on every downbeat after the hook: wide → close
+  // → wide → tight, each cut landing with a tiny overshoot and a light flash
+  const {downbeats} = useBeats();
+  const cuts = downbeats.map(sec).filter((f) => f > hookOut + 20 && f < introEnd - 6);
+  const LEVELS = [1.2, 1.0, 1.12, 1.3];
+  let level = 1;
+  let lastCut = -999;
+  cuts.forEach((f, i) => {
+    if (frame >= f) {
+      level = LEVELS[i % LEVELS.length];
+      lastCut = f;
+    }
+  });
+  const sinceCut = frame - lastCut;
+  const overshoot = interpolate(sinceCut, [0, 4, 12], [1.04, 0.995, 1], clamp);
+  const cutFlash = interpolate(sinceCut, [0, 2, 8], [0.35, 0.18, 0], clamp);
+  const zoom = level * overshoot;
   const side = INTRO_BADGE_SIDE;
 
   return (
     <AbsoluteFill style={{background: COLORS.bgDeep}}>
-      <AbsoluteFill style={{transform: `scale(${push * punch})`}}>
+      <AbsoluteFill style={{transform: `scale(${push * punch * zoom})`, transformOrigin: '50% 28%'}}>
         <OffthreadVideo
           src={staticFile(ASSETS.intro)}
           trimBefore={sec(INTRO_TRIM_START)}
@@ -44,6 +61,8 @@ export const IntroScene: React.FC<{durationInFrames: number}> = ({durationInFram
       <AbsoluteFill
         style={{background: 'radial-gradient(120% 70% at 50% 40%, transparent 60%, rgba(8,4,17,0.55) 100%)'}}
       />
+
+      {cutFlash > 0 ? <AbsoluteFill style={{background: 'rgba(224,170,255,1)', opacity: cutFlash, mixBlendMode: 'soft-light'}} /> : null}
 
       <Hook />
 

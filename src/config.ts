@@ -32,9 +32,6 @@ export const ASSETS = {
   music: 'media/music.mp3', // loudness-normalised music.mp3
   logo: 'logo.png',
   logoClean: 'logo-clean.png', // logo with the black background keyed out
-  surfaceFront: 'surface-front.png',
-  surfaceSide: 'surface-side.png',
-  surfaceBack: 'surface-back.png',
   timestamps: 'edit.json', // word timings re-timed to the edited voiceover
   audioAnalysis: 'audio-analysis.json',
 };
@@ -108,15 +105,21 @@ export const CUES = {
     keyboard: {words: ['کیبورد', 'کیبرد', 'جدا', 'جداشدنی'], fallback: 0.3},
     weight: {words: ['وزن', 'گرم', 'سبک', 'سبکه'], fallback: 0.45},
     touch: {words: ['تاچ', 'لمسی', '2k', 'دوکا', 'صفحه', 'نمایشگر'], fallback: 0.65},
+    k2: {words: ['2k', 'دوکا'], fallback: 0.85},
   },
   config: {
-    cpu: {words: ['i7', 'core', 'پردازنده', 'کور'], fallback: 0.08},
-    cpu2: {words: ['i5'], fallback: 0.3},
-    ram: {words: ['رم', 'رمهای', 'رمها'], fallback: 0.38},
-    ram2: {words: ['16'], fallback: 0.45},
-    ssd: {words: ['حافظه', 'ssd', 'اس‌اس‌دی', 'هارد'], fallback: 0.55},
-    ssd128: {words: ['128'], fallback: 0.58},
-    ssd512: {words: ['512'], fallback: 0.64},
+    // each box arrives big when you start talking about it, the pointer
+    // clicks the option as you say it, then the box docks into the grid
+    cpuShow: {words: ['علاوه', 'نسخه'], fallback: 0.02},
+    cpu: {words: ['core', 'i7'], fallback: 0.12},
+    cpuEco: {words: ['اقتصادیتر', 'اقتصادی'], fallback: 0.28},
+    cpu2: {words: ['core', 'i5'], fallback: 0.36},
+    ram: {words: ['رمهای', 'رمها', 'رم'], fallback: 0.48},
+    ram8: {words: ['8'], fallback: 0.54},
+    ram16: {words: ['16'], fallback: 0.6},
+    ssd: {words: ['حافظههای', 'حافظه', 'ssd', 'هارد'], fallback: 0.66},
+    ssd128: {words: ['128'], fallback: 0.72},
+    ssd512: {words: ['512'], fallback: 0.82},
   },
   buy: {
     consult: {words: ['کارشناسای', 'کارشناس', 'کارشناسان', 'مشاوره'], fallback: 0.02},

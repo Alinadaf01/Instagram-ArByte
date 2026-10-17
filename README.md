@@ -17,13 +17,12 @@ npm run render                      # → out/arbyte-surface-final.mp4
 
 | Source | Used for |
 | --- | --- |
-| `public/timestamps.json` (`scripts/transcribe.py`) | Word-by-word subtitles and keyword cues (e.g. «رم» lights up the RAM toggle) |
-| `public/audio-analysis.json` (`scripts/analyze_audio.py`) | Trims the 1.3s of silence at the head of the voiceover, splits it into 3 parts at its longest pauses, and finds the music's drops |
-| `music.mp3` (`useAudioData`) | Neon glows pulse to the real bass |
+| `public/edit.json` (`transcribe.py` → `fix_transcript.py` → `build_audio.py`) | Word-by-word subtitles and every cue: spec badges, config clicks («Core i7», «۸ یا ۱۶», «۱۲۸ تا ۵۱۲»), the 2K burst, the CTA |
+| `public/audio-analysis.json` (`analyze_audio.py`) | Voiceover pauses, the music's drops and its 129 BPM beat grid (hook punches, jump-zooms, beat-snapped entrances) |
+| `public/media/*` (`build_audio.py`) | Voices cleaned and normalised, music normalised so it sits ~14 dB under speech; the ArByte-history sentence is cut from the voiceover |
+| `public/surface/*` (`fetch_surface_images.py`) | Official Surface Pro 7+ 360° turntable (36 frames) and tablet-mode shot from microsoft.com |
 
-The music is shifted so its drop (22.06s in the track) lands exactly on the
-intro → design cut, and its second drop accents the website reveal.
+The music is shifted so its drop lands exactly on the intro → design cut.
 
-Everything you'd want to tweak (texts, badge timings, keywords, music levels,
-magnifier position on the Torob/Emalls screenshots) lives in `src/config.ts`.
-If a subtitle word is misspelt, fix its `"word"` in `public/timestamps.json`.
+Everything you'd want to tweak (texts, badge timings, keywords, music levels)
+lives in `src/config.ts`. Subtitle spelling fixes go in `scripts/fix_transcript.py`.

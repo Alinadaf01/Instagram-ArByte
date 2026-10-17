@@ -31,7 +31,6 @@ export type VideoProps = {
   timeline: Timeline;
   musicDrop: number | null; // seconds into music.mp3 where its drop is
   hasMusic: boolean;
-  cleanProducts: boolean;
   hasLogo: boolean;
   websiteAspect: number;
 };
@@ -58,7 +57,7 @@ const useMusicVolume = (tl: Timeline) => {
   };
 };
 
-export const ArbyteReel: React.FC<VideoProps> = ({timeline: tl, musicDrop, hasMusic, cleanProducts, hasLogo, websiteAspect}) => {
+export const ArbyteReel: React.FC<VideoProps> = ({timeline: tl, musicDrop, hasMusic, hasLogo, websiteAspect}) => {
   const {starts, durations, transitionFrames} = sceneLayout(tl);
   const volume = useMusicVolume(tl);
   const timing = linearTiming({durationInFrames: transitionFrames});

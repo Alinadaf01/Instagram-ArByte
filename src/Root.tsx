@@ -24,14 +24,13 @@ const fetchJson = async <T,>(file: string): Promise<T | null> => {
 };
 
 const calculateMetadata: CalculateMetadataFunction<VideoProps> = async ({props}) => {
-  const [ts, voDur, analysis, hasMusic, cleanProducts, hasLogo, web] = await Promise.all([
+  const [ts, voDur, analysis, hasMusic, hasLogo, web] = await Promise.all([
     fetchJson<Timestamps>(ASSETS.timestamps),
     parseMedia({src: staticFile(ASSETS.voiceover), fields: {durationInSeconds: true}, acknowledgeRemotionLicense: true})
       .then((m) => m.durationInSeconds ?? 0)
       .catch(() => 0),
     fetchJson<AudioAnalysis>(ASSETS.audioAnalysis),
     exists(ASSETS.music),
-    exists(ASSETS.surfaceFront.replace('.png', '-clean.png')),
     exists(ASSETS.logo),
     parseMedia({src: staticFile(ASSETS.website), fields: {dimensions: true}, acknowledgeRemotionLicense: true})
       .then((m) => m.dimensions)
@@ -47,7 +46,6 @@ const calculateMetadata: CalculateMetadataFunction<VideoProps> = async ({props})
       timeline,
       musicDrop: edited?.musicDrop ?? null,
       hasMusic,
-      cleanProducts,
       hasLogo,
       websiteAspect: web ? web.width / web.height : 16 / 10,
     },
@@ -66,7 +64,6 @@ export const RemotionRoot: React.FC = () => (
       timeline: buildTimeline(null, 30, null),
       musicDrop: null,
       hasMusic: true,
-      cleanProducts: false,
       hasLogo: true,
       websiteAspect: 16 / 10,
     }}

@@ -152,24 +152,24 @@ export const buildTimeline = (
     keyboard: q(findCue(words, b0, b1, CUES.design.keyboard, b0 + 1.2)),
     weight: q(findCue(words, b0, b1, CUES.design.weight, b0 + 1.6)),
     touch: q(findCue(words, b0, b1, CUES.design.touch, b0 + 2.4)),
+    k2: 0,
   };
+  design.k2 = Math.max(findCue(words, b0, b1, CUES.design.k2, design.touch + 0.6), design.touch + 1.2);
   const c = CUES.config;
-  const cpu = findCue(words, b1, b2, c.cpu, b1 + 0.6);
-  const cpu2 = Math.max(findCue(words, b1, b2, c.cpu2, cpu + 0.5), cpu + 1.0);
-  const ram = Math.max(findCue(words, b1, b2, c.ram, cpu2 + 0.3), cpu2 + 0.6);
-  const ram2 = Math.max(findCue(words, b1, b2, c.ram2, ram + 0.2), ram + 0.5);
-  const ssd = Math.max(findCue(words, b1, b2, c.ssd, ram2 + 0.2), ram2 + 0.5);
-  const ssd128 = Math.max(findCue(words, b1, b2, c.ssd128, ssd), ssd + 0.3);
-  const ssd512 = Math.max(findCue(words, b1, b2, c.ssd512, ssd128 + 0.3), ssd128 + 0.6);
-  const config = {
-    cpu: q(cpu),
-    cpu2: q(cpu2),
-    ram: q(ram),
-    ram2: q(ram2),
-    ssd: q(ssd),
-    ssd128: q(ssd128),
-    ssd512: q(ssd512),
-  };
+  const f = (spec: (typeof c)[keyof typeof c], after: number, gap: number) =>
+    Math.max(findCue(words, b1, b2, spec, after), after + gap);
+  const cpuShow = q(findCue(words, b1, b2, c.cpuShow, b1 + 0.2));
+  const cpu = f(c.cpu, cpuShow + 0.4, 0.4);
+  const cpuEco = f(c.cpuEco, cpu + 0.4, 0.6);
+  const cpu2 = f(c.cpu2, cpuEco, 0.4);
+  const ram = q(f(c.ram, cpu2 + 0.3, 0.6));
+  const ram8 = f(c.ram8, ram + 0.2, 0.45);
+  const ram16 = f(c.ram16, ram8 + 0.2, 0.4);
+  const ssd = q(f(c.ssd, ram16 + 0.2, 0.5));
+  const ssd128 = f(c.ssd128, ssd + 0.2, 0.45);
+  const ssd512 = f(c.ssd512, ssd128 + 0.3, 0.6);
+  // clicks stay exactly on the words; box entrances snap to the beat
+  const config = {cpuShow, cpu, cpuEco, cpu2, ram, ram8, ram16, ssd, ssd128, ssd512};
 
   // second music drop → glow accent wherever it lands
   const drop = analysis?.musicDrop ?? null;
