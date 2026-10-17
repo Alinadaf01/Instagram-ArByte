@@ -6,6 +6,7 @@ import {ASSETS, COLORS, FPS} from '../config';
 import {clamp, pop} from '../lib/anim';
 import {beatAfter, useBeatPulse, useBeats} from '../lib/beat';
 import {Glass, NeonText} from '../components/Glass';
+import {Turntable, TurntablePreload} from '../components/Turntable';
 import {useBass} from '../lib/audio';
 
 // ── 0–3.5s scroll-stopper ─────────────────────────────────────────────────
@@ -61,61 +62,34 @@ const Word: React.FC<{at: number; children: React.ReactNode; size: number; color
   );
 };
 
-const Device: React.FC<{offset: number; out: number}> = ({offset, out}) => {
+const Device: React.FC<{offset: number; out: number; landAt: number}> = ({offset, out, landAt}) => {
   const frame = useCurrentFrame() + offset;
   const bass = useBass();
   const {beat} = useBeatPulse(offset, 6);
   // spring starts before frame 0 → first frame is mid-motion
   const enter = pop(frame, -9);
-  const spin = interpolate(frame, [0, 40], [-38, 0], {...clamp, easing: (t) => 1 - Math.pow(1 - t, 3)});
+  // one full 360° turn of the real device, landing on the ¾ front on «هر دو!»
+  const landF = Math.round(landAt * FPS);
+  const t = interpolate(frame, [-6, landF], [0, 1], clamp);
+  const angle = 36 * (1 - Math.pow(1 - t, 2.4));
   const outF = Math.round(out * FPS);
   const fly = pop(frame, outF);
   const x = interpolate(fly, [0, 1], [0, -40]);
   const y = interpolate(fly, [0, 1], [0, -720]);
   const s = interpolate(fly, [0, 1], [1, 0.16]);
   const idle = Math.sin(frame * 0.06) * 6;
+  const W = 980;
   return (
     <div
       style={{
         position: 'absolute',
-        left: 90,
-        top: 700,
-        width: 900,
-        transform: `translate(${x}px, ${(1 - enter) * 700 + y + idle}px) perspective(1400px) rotateY(${spin + Math.sin(frame * 0.03) * 6}deg) rotateX(${(1 - enter) * 30}deg) scale(${(0.7 + enter * 0.3) * s * (1 + beat * 0.035)})`,
+        left: (1080 - W) / 2,
+        top: 690,
+        transform: `translate(${x}px, ${(1 - enter) * 700 + y + idle}px) perspective(1400px) rotateX(${(1 - enter) * 30}deg) scale(${(0.7 + enter * 0.3) * s * (1 + beat * 0.035)})`,
         opacity: interpolate(fly, [0.25, 0.7], [1, 0], clamp),
       }}
     >
-      {/* halo */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: '-10% -5%',
-          borderRadius: '50%',
-          background: `radial-gradient(circle, rgba(157,78,221,${0.55 + bass * 0.3}) 0%, transparent 65%)`,
-          filter: 'blur(20px)',
-        }}
-      />
-      <Img
-        src={staticFile(ASSETS.surfaceFront.replace('.png', '-clean.png'))}
-        style={{
-          position: 'relative',
-          width: '100%',
-          filter: `drop-shadow(0 40px 50px rgba(0,0,0,0.7)) drop-shadow(0 0 ${40 + beat * 40}px rgba(199,125,255,0.8))`,
-        }}
-      />
-      {/* specular sweep over the device */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: `linear-gradient(110deg, transparent ${((frame * 3.2) % 260) - 80}%, rgba(255,255,255,0.35) ${((frame * 3.2) % 260) - 70}%, transparent ${((frame * 3.2) % 260) - 58}%)`,
-          mixBlendMode: 'overlay',
-          WebkitMaskImage: `url(${staticFile(ASSETS.surfaceFront.replace('.png', '-clean.png'))})`,
-          WebkitMaskSize: '100% 100%',
-          maskImage: `url(${staticFile(ASSETS.surfaceFront.replace('.png', '-clean.png'))})`,
-          maskSize: '100% 100%',
-        }}
-      />
+      <Turntable angle={angle} width={W} glow={0.55 + bass * 0.3 + beat * 0.3} reflection={false} />
     </div>
   );
 };
@@ -140,14 +114,15 @@ export const Hook: React.FC = () => {
           backdropFilter: 'blur(10px) saturate(140%)',
         }}
       />
+      <TurntablePreload />
       {/* Device: motion-blurred entrance, then sharp */}
       <Sequence durationInFrames={24} layout="none">
         <CameraMotionBlur shutterAngle={240} samples={7}>
-          <Device offset={0} out={T.out} />
+          <Device offset={0} out={T.out} landAt={T.both} />
         </CameraMotionBlur>
       </Sequence>
       <Sequence from={24} layout="none">
-        <Device offset={24} out={T.out} />
+        <Device offset={24} out={T.out} landAt={T.both} />
       </Sequence>
 
       {/* kinetic headline, one punch per beat */}

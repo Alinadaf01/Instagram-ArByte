@@ -79,7 +79,7 @@ export const ArbyteReel: React.FC<VideoProps> = ({timeline: tl, musicDrop, hasMu
           </TransitionSeries.Sequence>
           <TransitionSeries.Transition presentation={zoomFlash()} timing={timing} />
           <TransitionSeries.Sequence durationInFrames={durations[1]}>
-            <DesignScene start={starts[1]} cues={tl.cues.design} clean={cleanProducts} />
+            <DesignScene start={starts[1]} cues={tl.cues.design} />
           </TransitionSeries.Sequence>
           <TransitionSeries.Transition presentation={glassPush()} timing={timing} />
           <TransitionSeries.Sequence durationInFrames={durations[2]}>

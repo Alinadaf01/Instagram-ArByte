@@ -2,7 +2,8 @@ import React from 'react';
 import {AbsoluteFill, Img, interpolate, Sequence, staticFile, useCurrentFrame} from 'remotion';
 import {CameraMotionBlur} from '@remotion/motion-blur';
 import {Feather, Fingerprint, Keyboard} from 'lucide-react';
-import {ASSETS, COLORS} from '../config';
+import {COLORS} from '../config';
+import {Turntable, TurntablePreload} from '../components/Turntable';
 import {bob, clamp, pop, toFa} from '../lib/anim';
 import {sec} from '../lib/timeline';
 import {Background} from '../components/Background';
@@ -11,95 +12,62 @@ import {useBass} from '../lib/audio';
 
 type Cues = {keyboard: number; weight: number; touch: number};
 
-const ProductShot: React.FC<{
-  src: string;
-  clean: boolean;
-  width: number;
-  style?: React.CSSProperties;
-  glow?: number;
-}> = ({src, clean, width, style, glow = 0}) => {
-  if (clean) {
-    return (
-      <div style={{position: 'absolute', width, ...style}}>
-        <Img
-          src={staticFile(src)}
-          style={{
-            width: '100%',
-            filter: `drop-shadow(0 30px 40px rgba(0,0,0,0.6)) drop-shadow(0 0 ${30 + glow * 40}px rgba(157,78,221,${0.35 + glow * 0.4}))`,
-          }}
-        />
-        {/* floor reflection */}
-        <Img
-          src={staticFile(src)}
-          style={{
-            width: '100%',
-            transform: 'scaleY(-1)',
-            marginTop: 6,
-            opacity: 0.18,
-            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 35%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 35%)',
-          }}
-        />
-      </div>
-    );
-  }
-  // White-background photo → frame it inside a rounded glass showcase
-  return (
-    <div style={{position: 'absolute', width, ...style}}>
-      <Glass radius={40} style={{padding: 14}} glow={glow}>
-        <Img src={staticFile(src)} style={{width: '100%', borderRadius: 28, display: 'block'}} />
-      </Glass>
-    </div>
-  );
-};
-
-const Products: React.FC<{offset: number; clean: boolean; touchAt: number}> = ({offset, clean, touchAt}) => {
+// One full 360° turn of the real device («طراحی جادویی»), settle on the ¾
+// front for «وزن ۷۷۰ گرم», square up to the front, then on «جدا شدن کیبورد»
+// the keyboard drops away and it becomes the tablet.
+const DeviceStage: React.FC<{offset: number; weightAt: number; keyboardAt: number; touchAt: number}> = ({
+  offset,
+  weightAt,
+  keyboardAt,
+  touchAt,
+}) => {
   const frame = useCurrentFrame() + offset;
   const bass = useBass();
-  const pFront = pop(frame, 4);
-  const pSide = pop(frame, 16);
-  const pBack = pop(frame, 26);
-  const rot = Math.sin(frame * 0.025) * 7;
-  const touchGlow = interpolate(frame - touchAt, [0, 20, 90], [0, 1, 0.2], clamp);
+  const enter = pop(frame, 2);
+  const spinEnd = Math.max(60, weightAt - 6);
+  const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+  // 18 (back) → 36 (= 0, ¾ front) during the spin, then 0 → 4 (front) before the detach
+  let angle = 18 + 18 * ease(interpolate(frame, [0, spinEnd], [0, 1], clamp));
+  angle += 4 * ease(interpolate(frame, [keyboardAt - 40, keyboardAt - 8], [0, 1], clamp));
+  const detach = pop(frame, keyboardAt);
+  const touchGlow = interpolate(frame - touchAt, [0, 20, 90], [0, 1, 0.25], clamp);
+  const W = 900;
+  const tabletW = 700;
   return (
-    <AbsoluteFill style={{perspective: 1400}}>
-      <ProductShot
-        src={clean ? ASSETS.surfaceSide.replace('.png', '-clean.png') : ASSETS.surfaceSide}
-        clean={clean}
-        width={clean ? 430 : 300}
-        glow={bass * 0.3}
+    <AbsoluteFill>
+      {/* laptop turntable — keyboard falls away on the detach */}
+      <div
         style={{
-          right: -20,
-          top: 740 + bob(frame, 12, 0.04, 1),
-          transform: `translateX(${(1 - pSide) * 500}px) rotateY(${-14 + rot}deg) rotateZ(2deg)`,
-          opacity: pSide,
+          position: 'absolute',
+          left: (1080 - W) / 2,
+          top: 470 + bob(frame, 10, 0.035),
+          transform: `translateY(${(1 - enter) * 700 + detach * 260}px) scale(${(0.6 + enter * 0.4) * (1 - detach * 0.15)})`,
+          opacity: Math.min(1, enter * 1.6) * (1 - detach),
         }}
-      />
-      <ProductShot
-        src={clean ? ASSETS.surfaceBack.replace('.png', '-clean.png') : ASSETS.surfaceBack}
-        clean={clean}
-        width={clean ? 400 : 340}
-        glow={bass * 0.3}
-        style={{
-          right: 10,
-          top: 420 + bob(frame, 12, 0.04, 2.4),
-          transform: `translateX(${(1 - pBack) * 520}px) rotateY(${-26 + rot}deg) rotateZ(5deg)`,
-          opacity: pBack,
-        }}
-      />
-      <ProductShot
-        src={clean ? ASSETS.surfaceFront.replace('.png', '-clean.png') : ASSETS.surfaceFront}
-        clean={clean}
-        width={clean ? 600 : 520}
-        glow={0.25 + bass * 0.4 + touchGlow * 0.6}
-        style={{
-          left: clean ? 70 : 120,
-          top: 500 + bob(frame, 14, 0.035),
-          transform: `translateY(${(1 - pFront) * 900}px) scale(${0.6 + pFront * 0.4}) rotateY(${rot * 0.6}deg) rotateX(${(1 - pFront) * 40}deg)`,
-          opacity: Math.min(1, pFront * 1.6),
-          zIndex: 2,
-        }}
-      />
+      >
+        <Turntable angle={angle} width={W} glow={0.3 + bass * 0.4} />
+      </div>
+      {/* tablet mode */}
+      {frame >= keyboardAt - 2 ? (
+        <div
+          style={{
+            position: 'absolute',
+            left: (1080 - tabletW) / 2,
+            top: 455 + bob(frame, 10, 0.035),
+            transform: `perspective(1400px) rotateX(${(1 - detach) * 25}deg) translateY(${(1 - detach) * 60}px) scale(${0.85 + detach * 0.15})`,
+            opacity: detach,
+          }}
+        >
+          <Img
+            src={staticFile('surface/tablet.png')}
+            style={{
+              width: tabletW,
+              display: 'block',
+              filter: `drop-shadow(0 34px 40px rgba(0,0,0,0.65)) drop-shadow(0 0 ${30 + touchGlow * 50 + bass * 30}px rgba(199,125,255,${0.45 + touchGlow * 0.4}))`,
+            }}
+          />
+        </div>
+      ) : null}
     </AbsoluteFill>
   );
 };
@@ -110,7 +78,7 @@ const TouchRipple: React.FC<{at: number}> = ({at}) => {
   if (f < -10) return null;
   const finger = pop(frame, at - 10);
   return (
-    <div style={{position: 'absolute', left: 370, top: 700, zIndex: 5}}>
+    <div style={{position: 'absolute', left: 540, top: 660, zIndex: 5}}>
       {[0, 14, 28, 42].map((d) => {
         const p = interpolate(f - d, [0, 50], [0, 1], clamp);
         if (f - d < 0) return null;
@@ -253,7 +221,7 @@ const TouchCard: React.FC<{at: number}> = ({at}) => {
   );
 };
 
-export const DesignScene: React.FC<{start: number; cues: Cues; clean: boolean}> = ({start, cues, clean}) => {
+export const DesignScene: React.FC<{start: number; cues: Cues}> = ({start, cues}) => {
   const frame = useCurrentFrame();
   const local = (s: number) => sec(s) - start;
   const head = pop(frame, 8);
@@ -279,13 +247,14 @@ export const DesignScene: React.FC<{start: number; cues: Cues; clean: boolean}> 
         </NeonText>
       </div>
 
-      <Sequence durationInFrames={50} layout="none">
+      <TurntablePreload />
+      <Sequence durationInFrames={40} layout="none">
         <CameraMotionBlur shutterAngle={200} samples={6}>
-          <Products offset={0} clean={clean} touchAt={touchAt} />
+          <DeviceStage offset={0} weightAt={local(cues.weight)} keyboardAt={local(cues.keyboard)} touchAt={touchAt} />
         </CameraMotionBlur>
       </Sequence>
-      <Sequence from={50} layout="none">
-        <Products offset={50} clean={clean} touchAt={touchAt} />
+      <Sequence from={40} layout="none">
+        <DeviceStage offset={40} weightAt={local(cues.weight)} keyboardAt={local(cues.keyboard)} touchAt={touchAt} />
       </Sequence>
 
       {/* detachable keyboard chip */}
