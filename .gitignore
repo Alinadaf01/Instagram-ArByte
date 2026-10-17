@@ -3,3 +3,6 @@ out/
 .venv/
 __pycache__/
 *.log
+renders/
+*.mp4
+!public/**/*.mp4
