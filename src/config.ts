@@ -32,6 +32,8 @@ export const ASSETS = {
   music: 'media/music.mp3', // loudness-normalised music.mp3
   logo: 'logo.png',
   logoClean: 'logo-clean.png', // logo with the black background keyed out
+  torob: 'torob.jpg',
+  emalls: 'emalls.jpg',
   timestamps: 'edit.json', // word timings re-timed to the edited voiceover
   audioAnalysis: 'audio-analysis.json',
 };

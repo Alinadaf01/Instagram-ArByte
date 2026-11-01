@@ -4,6 +4,15 @@ import {parseMedia} from '@remotion/media-parser';
 import {ASSETS, FPS, HEIGHT, WIDTH} from './config';
 import {AudioAnalysis, buildTimeline, Timestamps} from './lib/timeline';
 import {ArbyteReel, VideoProps} from './Video';
+import {TRUST_DURATION, TRUST_MUSIC_START, TrustReel, TrustReelProps} from './trust/TrustReel';
+import {Story} from './trust/Stories';
+
+// beats of music.mp3 re-based to a reel that starts `start` seconds into it
+const trustMetadata: CalculateMetadataFunction<TrustReelProps> = async ({props}) => {
+  const analysis = await fetchJson<AudioAnalysis>(ASSETS.audioAnalysis);
+  const shift = (xs?: number[]) => (xs ?? []).map((b) => b - TRUST_MUSIC_START).filter((b) => b >= -0.01 && b <= TRUST_DURATION / FPS);
+  return {props: {...props, beats: shift(analysis?.beats), downbeats: shift(analysis?.downbeats), hasLogo: await exists(ASSETS.logoClean)}};
+};
 
 const exists = async (file: string) => {
   try {
@@ -53,6 +62,7 @@ const calculateMetadata: CalculateMetadataFunction<VideoProps> = async ({props})
 };
 
 export const RemotionRoot: React.FC = () => (
+  <>
   <Composition
     id="SurfacePro7Plus"
     component={ArbyteReel}
@@ -69,4 +79,16 @@ export const RemotionRoot: React.FC = () => (
     }}
     calculateMetadata={calculateMetadata}
   />
+  <Composition
+    id="TrustReel"
+    component={TrustReel}
+    fps={FPS}
+    width={WIDTH}
+    height={HEIGHT}
+    durationInFrames={TRUST_DURATION}
+    defaultProps={{beats: [], downbeats: [], hasLogo: true}}
+    calculateMetadata={trustMetadata}
+  />
+  <Composition id="Story" component={Story} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} defaultProps={{index: 0}} />
+  </>
 );
