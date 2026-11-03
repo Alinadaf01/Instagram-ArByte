@@ -6,3 +6,5 @@ __pycache__/
 renders/
 *.mp4
 !public/**/*.mp4
+# reel #2 source takes and derived media stay local (shared via Google Drive)
+public/video2/
