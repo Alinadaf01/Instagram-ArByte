@@ -40,6 +40,16 @@ MERGE = {  # consecutive tokens shown as one subtitle word
     "0354": [(["برای", "تو"], "برات")],
 }
 
+# per-location colour correction, applied before scaling
+GRADE = {
+    # grey wall: slightly dark face → lift mids a touch, a little warmth and pop
+    "grey": "eq=gamma=1.07:saturation=1.08:contrast=1.03,colorbalance=rm=0.025:bm=-0.01,unsharp=5:5:0.5",
+    # beige wall: yellow cast + flat contrast → neutralise highlights, deepen blacks
+    "beige": "curves=r='0/0 0.5/0.49 1/0.97':b='0/0 0.25/0.25 0.6/0.64 0.85/0.92 1/1',"
+    "curves=all='0/0 0.10/0.06 0.5/0.5 0.78/0.85 1/1',eq=saturation=1.05,unsharp=5:5:0.5",
+}
+LOCATION = {"0350": "grey", "0351": "grey", "0352": "beige", "0353": "beige", "0354": "beige"}
+
 VOICE = (
     "highpass=f=90,lowpass=f=13000,afftdn=nf=-28,"
     "deesser=i=0.4,"
@@ -81,7 +91,7 @@ def main():
         for a, b in ranges:
             vparts.append(
                 f"[{idx}:v]trim={a}:{b},setpts=PTS-STARTPTS,"
-                f"scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,format=yuv420p[v{k}]"
+                f"scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,{GRADE[LOCATION[take]]},format=yuv420p[v{k}]"
             )
             aparts.append(f"[{idx}:a]atrim={a}:{b},asetpts=PTS-STARTPTS,afade=t=in:d=0.015,afade=t=out:st={b - a - 0.015}:d=0.015[a{k}]")
             labels.append(f"[v{k}][a{k}]")
@@ -101,7 +111,7 @@ def main():
 
     graph = ";".join(vparts + aparts) + f";{''.join(labels)}concat=n={k}:v=1:a=1[v][a];[a]{VOICE}[voice]"
     run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", graph,
-         "-map", "[v]", "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-movflags", "+faststart", "-an", str(V2 / "edit.mp4"),
+         "-map", "[v]", "-c:v", "libx264", "-preset", "medium", "-threads", "2", "-crf", "16", "-movflags", "+faststart", "-an", str(V2 / "edit.mp4"),
          "-map", "[voice]", "-ar", "48000", "-ac", "1", str(V2 / "voice.wav")])
     (V2 / "edit.json").write_text(json.dumps({"duration": round(t, 3), "segments": segments, "words": words}, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"edit: {t:.2f}s")

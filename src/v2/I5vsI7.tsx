@@ -209,7 +209,7 @@ const VideoLayer: React.FC<{pipIn: number; pipOut: number; cuts: number[]; hookE
       {/* unify the two locations: soft purple grade + vignette */}
       <AbsoluteFill style={{background: 'linear-gradient(180deg, rgba(21,9,43,0.45) 0%, transparent 25%, transparent 62%, rgba(8,4,17,0.85) 100%)'}} />
       <AbsoluteFill style={{background: 'radial-gradient(120% 75% at 50% 40%, transparent 55%, rgba(8,4,17,0.6) 100%)', mixBlendMode: 'multiply'}} />
-      <AbsoluteFill style={{background: 'rgba(110,40,190,0.10)', mixBlendMode: 'soft-light'}} />
+      <AbsoluteFill style={{background: 'rgba(110,40,190,0.06)', mixBlendMode: 'soft-light'}} />
     </div>
   );
 };
