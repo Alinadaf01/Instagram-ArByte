@@ -216,8 +216,8 @@ const VideoLayer: React.FC<{sideIn: number; sideOut: number; cuts: number[]; hoo
       {useCut ? (
         <Sequence from={cutStart} durationInFrames={cutEnd - cutStart} layout="none">
           {/* spotlight + rim behind the presenter */}
-          <div style={{position: 'absolute', left: 540 + p * SIDE.x - 520, top: 380, width: 1040, height: 1500, borderRadius: '50%', background: `radial-gradient(closest-side, rgba(157,78,221,${0.55 * p + bass * 0.2}), transparent 75%)`, filter: 'blur(30px)', zIndex: 4}} />
-          <AbsoluteFill style={{transform: presenter, transformOrigin: '50% 100%', zIndex: 5, filter: `drop-shadow(0 0 ${10 + bass * 8}px rgba(199,125,255,${0.85 * p})) drop-shadow(0 0 2px rgba(255,255,255,${0.6 * p}))`}}>
+          <div style={{position: 'absolute', left: 540 + p * SIDE.x - 520, top: 380, width: 1040, height: 1500, borderRadius: '50%', background: `radial-gradient(closest-side, rgba(157,78,221,${0.55 * p + bass * 0.2}), transparent 75%)`, zIndex: 4}} />
+          <AbsoluteFill style={{transform: presenter, transformOrigin: '50% 100%', zIndex: 5}}>
             <OffthreadVideo src={staticFile('video2/cutout.webm')} transparent muted style={{width: 1080, height: 1920}} />
           </AbsoluteFill>
           <AbsoluteFill style={{background: 'linear-gradient(180deg, transparent 70%, rgba(8,4,17,0.85) 100%)', opacity: p, zIndex: 6}} />

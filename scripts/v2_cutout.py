@@ -46,7 +46,15 @@ def main():
         m = np.mean([masks[j] for j in range(max(0, i - 1), min(len(masks), i + 2))], axis=0)
         mi = Image.fromarray(m.clip(0, 255).astype(np.uint8)).resize((W, H), Image.BILINEAR)
         mi = mi.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(1.5))
-        rgba = np.dstack([fr, np.asarray(mi)])
+        a = np.asarray(mi, np.float32) / 255
+        # bake the neon rim light into the file (a CSS drop-shadow on a
+        # full-frame video is too slow for the renderer)
+        glow = np.asarray(mi.filter(ImageFilter.GaussianBlur(14)), np.float32) / 255
+        rim = np.clip(glow * 1.6 - a * 0.9, 0, 1) * 0.9
+        col = np.array([199, 125, 255], np.float32)
+        out_a = np.clip(a + rim * (1 - a), 0, 1)
+        rgb = (fr.astype(np.float32) * a[..., None] + col * (rim * (1 - a))[..., None]) / np.maximum(out_a[..., None], 1e-4)
+        rgba = np.dstack([rgb.clip(0, 255).astype(np.uint8), (out_a * 255).astype(np.uint8)])
         Image.fromarray(rgba, "RGBA").save(tmp / f"{i:04d}.png", compress_level=1)
     subprocess.run(
         ["ffmpeg", "-v", "error", "-y", "-framerate", str(FPS), "-i", str(tmp / "%04d.png"), "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p",
