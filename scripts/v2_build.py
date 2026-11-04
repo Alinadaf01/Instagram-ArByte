@@ -42,13 +42,14 @@ MERGE = {  # consecutive tokens shown as one subtitle word
 
 # per-location colour correction, applied before scaling
 GRADE = {
-    # grey wall (same room as reel #1): only tame the hot highlights and give a
-    # touch of matte so it matches the first reel's look
-    "grey": "curves=all='0/0.03 0.25/0.24 0.5/0.48 0.85/0.74 1/0.9',eq=saturation=1.04",
-    # beige wall: was too bright and yellow → bring exposure down to the grey
-    # takes and neutralise the cast while keeping skin warm
-    "beige": "curves=r='0/0.02 0.3/0.25 0.6/0.52 0.76/0.69 1/0.9':g='0/0.02 0.3/0.25 0.6/0.51 0.75/0.68 1/0.9':"
-    "b='0/0.02 0.3/0.255 0.58/0.51 0.68/0.645 1/0.88',eq=saturation=1.02",
+    # grey wall: keep the skin alive — mild highlight roll-off only, warmer
+    # mids and a little more saturation (the matte lift made the face pale)
+    "grey": "curves=all='0/0 0.5/0.5 0.8/0.76 1/0.93',colorbalance=rm=0.04:gm=0.01:bm=-0.035:rh=0.02:bh=-0.02,"
+    "eq=saturation=1.15:contrast=1.04",
+    # beige wall: pull the yellow out of the skin and the overhead light
+    # (selective, not global), soften the hot top light, keep warmth
+    "beige": "selectivecolor=yellows='0 0.02 -0.22 0':whites='0 0 -0.08 0':neutrals='0 0 -0.04 0',"
+    "curves=all='0/0 0.45/0.43 0.8/0.75 1/0.93',colorbalance=rm=0.015:bm=-0.005,eq=saturation=1.08",
 }
 LOCATION = {"0350": "grey", "0351": "grey", "0352": "beige", "0353": "beige", "0354": "beige"}
 

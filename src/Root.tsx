@@ -7,6 +7,7 @@ import {ArbyteReel, VideoProps} from './Video';
 import {TRUST_DURATION, TRUST_MUSIC_START, TrustReel, TrustReelProps} from './trust/TrustReel';
 import {Story} from './trust/Stories';
 import {I5vsI7, V2_MUSIC_START, V2Props} from './v2/I5vsI7';
+import {V2Cover} from './v2/Cover';
 
 const v2Metadata: CalculateMetadataFunction<V2Props> = async ({props}) => {
   const [edit, analysis, cut] = await Promise.all([
@@ -114,6 +115,7 @@ export const RemotionRoot: React.FC = () => (
     defaultProps={{duration: 38, words: [], segments: [], beats: [], downbeats: [], cutStart: 0, cutEnd: 0}}
     calculateMetadata={v2Metadata}
   />
+  <Composition id="V2Cover" component={V2Cover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} defaultProps={{at: 4.4}} />
   <Composition id="Story" component={Story} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} defaultProps={{index: 0}} />
   </>
 );
