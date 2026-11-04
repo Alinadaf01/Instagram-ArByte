@@ -10,11 +10,12 @@ const BassContext = createContext(0);
 const BassAnalyser: React.FC<{
   musicStartFrame: number;
   musicTrimFrames: number;
+  src?: string;
   children: React.ReactNode;
-}> = ({musicStartFrame, musicTrimFrames, children}) => {
+}> = ({musicStartFrame, musicTrimFrames, src, children}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const audioData = useAudioData(staticFile(ASSETS.music));
+  const audioData = useAudioData(staticFile(src ?? ASSETS.music));
   let bass = 0;
   const local = frame - musicStartFrame + musicTrimFrames;
   if (audioData && local >= 0) {
@@ -36,6 +37,7 @@ export const BassProvider: React.FC<{
   enabled: boolean;
   musicStartFrame: number;
   musicTrimFrames: number;
+  src?: string;
   children: React.ReactNode;
 }> = ({enabled, children, ...rest}) =>
   enabled ? (

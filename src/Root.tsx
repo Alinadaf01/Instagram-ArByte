@@ -9,15 +9,16 @@ import {Story} from './trust/Stories';
 import {I5vsI7, V2_MUSIC_START, V2Props} from './v2/I5vsI7';
 
 const v2Metadata: CalculateMetadataFunction<V2Props> = async ({props}) => {
-  const [edit, analysis] = await Promise.all([
+  const [edit, analysis, cut] = await Promise.all([
     fetchJson<{duration: number; words: V2Props['words']; segments: V2Props['segments']}>('video2/edit.json'),
-    fetchJson<AudioAnalysis>(ASSETS.audioAnalysis),
+    fetchJson<AudioAnalysis>('video2/music/analysis.json'),
+    fetchJson<{start: number; end: number}>('video2/cutout.json'),
   ]);
   const duration = (edit?.duration ?? 38) + 0.4;
   const shift = (xs?: number[]) => (xs ?? []).map((b) => b - V2_MUSIC_START).filter((b) => b >= -0.01 && b <= duration);
   return {
     durationInFrames: Math.round(duration * FPS),
-    props: {...props, duration, words: edit?.words ?? [], segments: edit?.segments ?? [], beats: shift(analysis?.beats), downbeats: shift(analysis?.downbeats)},
+    props: {...props, duration, words: edit?.words ?? [], segments: edit?.segments ?? [], beats: shift(analysis?.beats), downbeats: shift(analysis?.downbeats), cutStart: cut?.start ?? 0, cutEnd: cut?.end ?? 0},
   };
 };
 
@@ -110,7 +111,7 @@ export const RemotionRoot: React.FC = () => (
     width={WIDTH}
     height={HEIGHT}
     durationInFrames={FPS * 38}
-    defaultProps={{duration: 38, words: [], segments: [], beats: [], downbeats: []}}
+    defaultProps={{duration: 38, words: [], segments: [], beats: [], downbeats: [], cutStart: 0, cutEnd: 0}}
     calculateMetadata={v2Metadata}
   />
   <Composition id="Story" component={Story} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} defaultProps={{index: 0}} />

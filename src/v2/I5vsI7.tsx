@@ -39,7 +39,10 @@ loadFonts();
 // i5 is always cyan, i7 always magenta — on cards, captions and the CTA.
 // ─────────────────────────────────────────────────────────────────────────
 
-export const V2_MUSIC_START = 22.06; // the track's drop hits frame 0
+// music/mc_cut.mp3 = Midnight City instrumental (vocals removed with
+// UVR-MDX-NET-Inst_HQ_3) starting at its riff + drum entry (16.48s), -16 LUFS
+export const V2_MUSIC_START = 16.48;
+const MUSIC_SRC = 'video2/music/mc_cut.mp3';
 const I5 = '#22D3EE';
 const I7 = '#E040FB';
 const GOLD = '#FFC53D';
@@ -47,7 +50,7 @@ const RED = '#FF4D6D';
 
 export type Word = {word: string; start: number; end: number; seg: string};
 export type Seg = {name: string; start: number; end: number};
-export type V2Props = {duration: number; words: Word[]; segments: Seg[]; beats: number[]; downbeats: number[]};
+export type V2Props = {duration: number; words: Word[]; segments: Seg[]; beats: number[]; downbeats: number[]; cutStart: number; cutEnd: number};
 
 const f = (s: number) => Math.round(s * FPS);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -84,7 +87,7 @@ const CpuCard: React.FC<{kind: 'i5' | 'i7'; w: number; h: number; big?: boolean;
     >
       <Cpu size={big ? 90 : 38} color={c} strokeWidth={2} style={{filter: `drop-shadow(0 0 12px ${c})`}} />
       <div style={{fontSize: big ? 30 : 18, fontWeight: 800, color: 'rgba(255,255,255,0.8)', letterSpacing: 4, marginTop: big ? 10 : 2}}>INTEL CORE</div>
-      <div style={{fontSize: big ? 170 : 70, fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: `0 0 30px ${c}, 0 0 70px ${c}88`}}>{kind}</div>
+      <div style={{fontSize: big ? 150 : 70, fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: `0 0 30px ${c}, 0 0 70px ${c}88`}}>{kind}</div>
       {big ? (
         <div dir="rtl" style={{fontSize: 36, fontWeight: 900, color: c, marginTop: 14}}>
           نسل ۱۱ · {kind === 'i5' ? 'i5-1135G7' : 'i7-1165G7'}
@@ -160,19 +163,31 @@ const CashBurst: React.FC<{at: number; cx: number; cy: number; n?: number}> = ({
   );
 };
 
-// ── video layer: full screen ↔ picture-in-picture ────────────────────────
-const PIP = {x: 700, y: 290, w: 340, h: 560, r: 44};
+// ── video layer ──────────────────────────────────────────────────────────
+// Full screen for hook / intro / CTA. For the i5 and i7 chapters the beige
+// wall dissolves into the motion world and the cut-out presenter (cutout.webm,
+// same frames, alpha from scripts/v2_cutout.py) slides to the right with a
+// neon rim light, so the cards can live beside him instead of a PiP box.
+const SIDE = {x: 290, s: 0.95}; // presenter offset/scale while the graphics are up
 
-const VideoLayer: React.FC<{pipIn: number; pipOut: number; cuts: number[]; hookEnd: number}> = ({pipIn, pipOut, cuts, hookEnd}) => {
+const look = (
+  <>
+    <AbsoluteFill style={{background: 'linear-gradient(180deg, rgba(21,9,43,0.5) 0%, transparent 22%, transparent 60%, rgba(8,4,17,0.88) 100%)'}} />
+    <AbsoluteFill style={{background: 'radial-gradient(120% 70% at 50% 40%, transparent 60%, rgba(8,4,17,0.55) 100%)'}} />
+  </>
+);
+
+const VideoLayer: React.FC<{sideIn: number; sideOut: number; cuts: number[]; hookEnd: number; cutStart: number; cutEnd: number}> = ({
+  sideIn,
+  sideOut,
+  cuts,
+  hookEnd,
+  cutStart,
+  cutEnd,
+}) => {
   const frame = useCurrentFrame();
   const bass = useBass();
-  const p = sp(frame, pipIn - 8, 18, 120) * (1 - sp(frame, pipOut - 6, 18, 120));
-  const x = lerp(0, PIP.x, p);
-  const y = lerp(0, PIP.y, p);
-  const w = lerp(1080, PIP.w, p);
-  const h = lerp(1920, PIP.h, p);
-  const r = lerp(0, PIP.r, p);
-  const scale = Math.max(w / 1080, h / 1920);
+  const p = sp(frame, sideIn - 10, 18, 110) * (1 - sp(frame, sideOut - 8, 18, 110));
   // jump-zooms on downbeats while full screen; hook opens with a slam-in
   const LEVELS = [1.14, 1.0, 1.22, 1.06];
   let level = 1;
@@ -187,30 +202,28 @@ const VideoLayer: React.FC<{pipIn: number; pipOut: number; cuts: number[]; hookE
   const overshoot = interpolate(since, [0, 4, 12], [1.05, 0.99, 1], clamp);
   const open = interpolate(frame, [0, 10], [1.32, 1.0], {...clamp, easing: (t) => 1 - Math.pow(1 - t, 3)});
   const zoom = (frame < hookEnd ? open : 1) * lerp(level * overshoot, 1, p);
+  const useCut = frame >= cutStart && frame < cutEnd && p > 0.001;
+  const presenter = `translate(${p * SIDE.x}px, 0) scale(${lerp(1, SIDE.s, p)})`;
   return (
-    <div
-      style={{
-        position: 'absolute',
-        left: x,
-        top: y,
-        width: w,
-        height: h,
-        borderRadius: r,
-        overflow: 'hidden',
-        zIndex: p > 0.02 ? 20 : 0,
-        boxShadow: p > 0.02 ? `0 0 0 ${3 * p}px ${COLORS.neon}, 0 0 ${40 + bass * 30}px rgba(157,78,221,${0.7 * p}), 0 30px 60px rgba(0,0,0,${0.6 * p})` : undefined,
-      }}
-    >
-      <div style={{position: 'absolute', left: (w - 1080 * scale) / 2, top: (h - 1920 * scale) / 2, width: 1080, height: 1920, transform: `scale(${scale})`, transformOrigin: '0 0'}}>
-        <div style={{width: 1080, height: 1920, transform: `scale(${zoom})`, transformOrigin: '50% 30%'}}>
+    <>
+      {/* the real frame, fading out while the presenter is cut out */}
+      <AbsoluteFill style={{opacity: useCut ? 1 - p : 1}}>
+        <AbsoluteFill style={{transform: `scale(${zoom})`, transformOrigin: '50% 30%'}}>
           <OffthreadVideo src={staticFile('video2/edit.mp4')} muted style={{width: 1080, height: 1920}} />
-        </div>
-      </div>
-      {/* unify the two locations: soft purple grade + vignette */}
-      <AbsoluteFill style={{background: 'linear-gradient(180deg, rgba(21,9,43,0.45) 0%, transparent 25%, transparent 62%, rgba(8,4,17,0.85) 100%)'}} />
-      <AbsoluteFill style={{background: 'radial-gradient(120% 75% at 50% 40%, transparent 55%, rgba(8,4,17,0.6) 100%)', mixBlendMode: 'multiply'}} />
-      <AbsoluteFill style={{background: 'rgba(110,40,190,0.06)', mixBlendMode: 'soft-light'}} />
-    </div>
+        </AbsoluteFill>
+        {look}
+      </AbsoluteFill>
+      {useCut ? (
+        <Sequence from={cutStart} durationInFrames={cutEnd - cutStart} layout="none">
+          {/* spotlight + rim behind the presenter */}
+          <div style={{position: 'absolute', left: 540 + p * SIDE.x - 520, top: 380, width: 1040, height: 1500, borderRadius: '50%', background: `radial-gradient(closest-side, rgba(157,78,221,${0.55 * p + bass * 0.2}), transparent 75%)`, filter: 'blur(30px)', zIndex: 4}} />
+          <AbsoluteFill style={{transform: presenter, transformOrigin: '50% 100%', zIndex: 5, filter: `drop-shadow(0 0 ${10 + bass * 8}px rgba(199,125,255,${0.85 * p})) drop-shadow(0 0 2px rgba(255,255,255,${0.6 * p}))`}}>
+            <OffthreadVideo src={staticFile('video2/cutout.webm')} transparent muted style={{width: 1080, height: 1920}} />
+          </AbsoluteFill>
+          <AbsoluteFill style={{background: 'linear-gradient(180deg, transparent 70%, rgba(8,4,17,0.85) 100%)', opacity: p, zIndex: 6}} />
+        </Sequence>
+      ) : null}
+    </>
   );
 };
 
@@ -249,12 +262,13 @@ const chunk = (words: Word[]): Chunk[] => {
   return out;
 };
 
-const Captions: React.FC<{words: Word[]}> = ({words}) => {
+const Captions: React.FC<{words: Word[]; hideFrom?: number}> = ({words, hideFrom}) => {
   const frame = useCurrentFrame();
   const t = frame / FPS;
+  const hidden = hideFrom !== undefined && frame >= hideFrom;
   const chunks = useMemo(() => chunk(words), [words]);
   const c = chunks.find((x) => t >= x.start - 0.04 && t < x.end);
-  if (!c) return null;
+  if (!c || hidden) return null;
   const enter = sp(frame, f(c.start - 0.04), 13, 170);
   return (
     <div dir="rtl" style={{position: 'absolute', left: 50, right: 50, bottom: 440, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 18px', transform: `translateY(${(1 - enter) * 50}px) scale(${0.85 + enter * 0.15})`, opacity: Math.min(1, enter * 1.5), zIndex: 40}}>
@@ -397,18 +411,16 @@ const ConfigChapter: React.FC<{kind: 'i5' | 'i7'; start: number; end: number; ch
   const leave = interpolate(frame, [end - 6, end + 4], [1, 0], clamp);
   return (
     <AbsoluteFill style={{opacity: leave}}>
-      <div style={{position: 'absolute', left: 40, top: 290, perspective: 1400}}>
-        <div style={{transform: `rotateY(${flip}deg) scale(${flipFrom ? 1 : 0.6 + enter * 0.4})`, opacity: flipFrom ? 1 : enter, backfaceVisibility: 'hidden'}}>
-          <CpuCard kind={kind} w={620} h={560} big glow={0.3} />
+      <div style={{position: 'absolute', left: 40, top: 270, perspective: 1400, zIndex: 7}}>
+        <div style={{transform: `rotateY(${flip}deg) translateX(${flipFrom ? 0 : (1 - enter) * -500}px)`, opacity: flipFrom ? 1 : enter, backfaceVisibility: 'hidden'}}>
+          <CpuCard kind={kind} w={540} h={480} big glow={0.3} />
         </div>
       </div>
       {chips.map((ch, i) => {
         const p = pop(frame, ch.at);
         if (frame < ch.at - 1) return null;
-        const col2 = i % 2;
-        const row = Math.floor(i / 2);
         return (
-          <div key={ch.text} style={{position: 'absolute', top: 900 + row * 200, [col2 === 0 ? 'right' : 'left']: 40, width: 480, display: 'flex', justifyContent: col2 === 0 ? 'flex-end' : 'flex-start'}}>
+          <div key={ch.text} style={{position: 'absolute', top: 790 + i * 114, left: 40, zIndex: 7, transform: `translateX(${(1 - p) * -300}px)`}}>
             <Chip icon={ch.icon} text={ch.text} color={col} p={p} size={40} />
           </div>
         );
@@ -441,9 +453,9 @@ const Cta: React.FC<{c: Record<string, number>}> = ({c}) => {
       {frame >= c.i5 - 2 ? bubble('i5', p5, 'right') : null}
       {frame >= c.i7 - 2 ? bubble('i7', p7, 'left') : null}
       {frame >= c.comment - 4 ? (
-        <div style={{position: 'absolute', left: 50, right: 50, top: 1130, transform: `translateY(${(1 - box) * 400}px)`, opacity: box, zIndex: 35}}>
+        <div style={{position: 'absolute', left: 50, right: 50, top: 1390, transform: `translateY(${(1 - box) * 400}px)`, opacity: box, zIndex: 45}}>
           {frame >= c.price ? (
-            <div style={{display: 'flex', justifyContent: 'center', marginBottom: 18, transform: `scale(${0.6 + dm * 0.4})`, opacity: dm}}>
+            <div style={{position: 'absolute', left: 0, right: 0, top: 380 - 1390, display: 'flex', justifyContent: 'center', transform: `scale(${0.6 + dm * 0.4})`, opacity: dm}}>
               <Glass radius={999} style={{padding: '10px 30px'}} glow={0.7} tint={`${GOLD}22`}>
                 <div dir="rtl" style={{fontSize: 38, fontWeight: 900, color: '#fff'}}>
                   📩 قیمت روز همون کانفیگ <span style={{color: GOLD}}>تو دایرکتت</span>
@@ -472,7 +484,7 @@ const Cta: React.FC<{c: Record<string, number>}> = ({c}) => {
 };
 
 // ── root ──────────────────────────────────────────────────────────────────
-export const I5vsI7: React.FC<V2Props> = ({duration, words, segments, beats, downbeats}) => {
+export const I5vsI7: React.FC<V2Props> = ({duration, words, segments, beats, downbeats, cutStart, cutEnd}) => {
   const frame = useCurrentFrame();
   const seg = (n: string) => segments.find((s) => s.name === n) ?? {name: n, start: 0, end: 0};
   const hook = seg('hook');
@@ -516,7 +528,7 @@ export const I5vsI7: React.FC<V2Props> = ({duration, words, segments, beats, dow
     for (let i = -10; i <= 10; i++) {
       const t = (fr + i) / FPS;
       const on = talk.some(([a, b]) => t >= a && t <= b);
-      const base = t < 0.25 ? 0.45 : on ? 0.06 : 0.14;
+      const base = t < 0.2 ? 0.5 : on ? 0.085 : 0.17;
       s += t > duration - 0.6 ? base * Math.max(0, (duration - t) / 0.6) : base;
     }
     return s / 21;
@@ -554,11 +566,11 @@ export const I5vsI7: React.FC<V2Props> = ({duration, words, segments, beats, dow
 
   return (
     <BeatProvider beats={beats} downbeats={downbeats}>
-      <BassProvider enabled musicStartFrame={0} musicTrimFrames={f(V2_MUSIC_START)}>
+      <BassProvider enabled musicStartFrame={0} musicTrimFrames={0} src={MUSIC_SRC}>
         <AbsoluteFill style={{background: COLORS.bgDeep, fontFamily: "'Vazirmatn', sans-serif"}}>
           <AbsoluteFill style={{transform: `scale(${1 + (inPip ? beat * 0.006 + down * 0.014 : 0)})`}}>
             <Background />
-            <VideoLayer pipIn={f(s5.start)} pipOut={f(cta.start)} cuts={cuts} hookEnd={f(hook.end)} />
+            <VideoLayer sideIn={f(s5.start)} sideOut={f(cta.start)} cuts={cuts} hookEnd={f(hook.end)} cutStart={f(cutStart)} cutEnd={f(cutEnd)} />
             <Sequence durationInFrames={f(hook.end)} layout="none">
               <Hook c={ch.hook} />
             </Sequence>
@@ -578,9 +590,9 @@ export const I5vsI7: React.FC<V2Props> = ({duration, words, segments, beats, dow
                 ]}
                 extra={
                   <>
-                    <Stamp at={ch.i5.pick} text="انتخاب مناسب" color={COLORS.green} icon={<CheckCircle2 size={52} color={COLORS.green} strokeWidth={2.8} />} style={{top: 760, left: 40, width: 620}} size={46} />
-                    <CashBurst at={ch.i5.save} cx={540} cy={1100} n={14} />
-                    <Stamp at={ch.i5.save} text="چرا پول اضافه بدی؟" color={GOLD} icon={<PiggyBank size={54} color={GOLD} strokeWidth={2.4} />} style={{top: 1170, left: 0, right: 0}} size={50} />
+                    <Stamp at={ch.i5.pick} text="انتخاب مناسب" color={COLORS.green} icon={<CheckCircle2 size={52} color={COLORS.green} strokeWidth={2.8} />} style={{top: 690, left: 40, width: 540}} size={44} />
+                    <CashBurst at={ch.i5.save} cx={310} cy={1020} n={14} />
+                    <Stamp at={ch.i5.save} text="چرا پول اضافه بدی؟" color={GOLD} icon={<PiggyBank size={54} color={GOLD} strokeWidth={2.4} />} style={{top: 1250, left: 30, width: 600}} size={44} />
                   </>
                 }
               />
@@ -605,12 +617,12 @@ export const I5vsI7: React.FC<V2Props> = ({duration, words, segments, beats, dow
               />
             ) : null}
             {frame >= f(cta.start) - 2 ? <Cta c={ch.cta} /> : null}
-            <Captions words={words} />
+            <Captions words={words} hideFrom={ch.cta.comment - 4} />
           </AbsoluteFill>
           {flash > 0 ? <AbsoluteFill style={{background: 'radial-gradient(circle, rgba(255,255,255,0.9), rgba(157,78,221,0.45) 45%, transparent 80%)', opacity: Math.min(1, flash), mixBlendMode: 'screen', zIndex: 50}} /> : null}
 
           <Audio src={staticFile('video2/voice.wav')} />
-          <Audio src={staticFile('media/music.mp3')} trimBefore={f(V2_MUSIC_START)} volume={musicVol} />
+          <Audio src={staticFile(MUSIC_SRC)} volume={musicVol} />
           {sfx.map((s, i) => (
             <Sequence key={i} from={Math.max(0, s.at)} durationInFrames={FPS} layout="none">
               <Audio src={staticFile(`video2/sfx/${s.src}.wav`)} volume={s.vol} />
@@ -628,18 +640,18 @@ const RamAndPower: React.FC<{ram: number; power: number}> = ({ram, power}) => {
   const slam = interpolate(frame - ram, [0, 4, 12], [2.2, 0.92, 1], clamp);
   const bars = sp(frame, power, 18, 90);
   return (
-    <div style={{position: 'absolute', top: 900, left: 40, right: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26}}>
+    <div style={{position: 'absolute', top: 800, left: 40, width: 560, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 26, zIndex: 7}}>
       <div style={{transform: `scale(${slam})`, opacity: Math.min(1, (frame - ram + 1) / 3)}}>
         <Glass radius={40} style={{padding: '20px 40px'}} glow={0.9} tint={`${I7}33`}>
           <div style={{display: 'flex', alignItems: 'center', gap: 22, direction: 'ltr'}}>
-            <MemoryStick size={86} color={I7} strokeWidth={2} style={{filter: `drop-shadow(0 0 14px ${I7})`}} />
-            <span style={{fontSize: 120, fontWeight: 900, color: '#fff', textShadow: `0 0 30px ${I7}`}}>16GB</span>
-            <span style={{fontSize: 56, fontWeight: 900, color: I7}}>RAM</span>
+            <MemoryStick size={70} color={I7} strokeWidth={2} style={{filter: `drop-shadow(0 0 14px ${I7})`}} />
+            <span style={{fontSize: 96, fontWeight: 900, color: '#fff', textShadow: `0 0 30px ${I7}`}}>16GB</span>
+            <span style={{fontSize: 46, fontWeight: 900, color: I7}}>RAM</span>
           </div>
         </Glass>
       </div>
       {frame >= power ? (
-        <div dir="rtl" style={{width: 900, display: 'flex', flexDirection: 'column', gap: 14, opacity: Math.min(1, bars * 1.5)}}>
+        <div dir="rtl" style={{width: 560, display: 'flex', flexDirection: 'column', gap: 14, opacity: Math.min(1, bars * 1.5)}}>
           {[
             ['i5', I5, 0.62],
             ['i7', I7, 1],
@@ -651,7 +663,7 @@ const RamAndPower: React.FC<{ram: number; power: number}> = ({ram, power}) => {
               </div>
             </div>
           ))}
-          <div style={{textAlign: 'center', fontSize: 34, fontWeight: 800, color: COLORS.silver}}>قدرت پردازش برای کارهای سنگین‌تر</div>
+          <div style={{textAlign: 'center', fontSize: 30, fontWeight: 800, color: COLORS.silver}}>قدرت پردازش برای کارهای سنگین‌تر</div>
         </div>
       ) : null}
     </div>

@@ -42,19 +42,25 @@ MERGE = {  # consecutive tokens shown as one subtitle word
 
 # per-location colour correction, applied before scaling
 GRADE = {
-    # grey wall: slightly dark face → lift mids a touch, a little warmth and pop
-    "grey": "eq=gamma=1.07:saturation=1.08:contrast=1.03,colorbalance=rm=0.025:bm=-0.01,unsharp=5:5:0.5",
-    # beige wall: yellow cast + flat contrast → neutralise highlights, deepen blacks
-    "beige": "curves=r='0/0 0.5/0.49 1/0.97':b='0/0 0.25/0.25 0.6/0.64 0.85/0.92 1/1',"
-    "curves=all='0/0 0.10/0.06 0.5/0.5 0.78/0.85 1/1',eq=saturation=1.05,unsharp=5:5:0.5",
+    # grey wall (same room as reel #1): only tame the hot highlights and give a
+    # touch of matte so it matches the first reel's look
+    "grey": "curves=all='0/0.03 0.25/0.24 0.5/0.48 0.85/0.74 1/0.9',eq=saturation=1.04",
+    # beige wall: was too bright and yellow → bring exposure down to the grey
+    # takes and neutralise the cast while keeping skin warm
+    "beige": "curves=r='0/0.02 0.3/0.25 0.6/0.52 0.76/0.69 1/0.9':g='0/0.02 0.3/0.25 0.6/0.51 0.75/0.68 1/0.9':"
+    "b='0/0.02 0.3/0.255 0.58/0.51 0.68/0.645 1/0.88',eq=saturation=1.02",
 }
 LOCATION = {"0350": "grey", "0351": "grey", "0352": "beige", "0353": "beige", "0354": "beige"}
 
+# The room is quiet (noise floor ≈ -75 dB), so no denoiser: the earlier
+# afftdn/de-esser made the voice sound processed. Clean EQ + gentle comp.
 VOICE = (
-    "highpass=f=90,lowpass=f=13000,afftdn=nf=-28,"
-    "deesser=i=0.4,"
-    "acompressor=threshold=-22dB:ratio=3.5:attack=6:release=110:makeup=5,"
-    "loudnorm=I=-16:TP=-1.5:LRA=6"
+    "highpass=f=75,"
+    "equalizer=f=220:t=q:w=1.2:g=-2.5,"     # less boxiness
+    "equalizer=f=3200:t=q:w=1.4:g=2.5,"     # presence / clarity
+    "equalizer=f=9000:t=h:w=0.7:g=1.5,"     # air
+    "acompressor=threshold=-20dB:ratio=2.5:attack=12:release=180:makeup=3,"
+    "loudnorm=I=-16:TP=-1.5:LRA=7"
 )
 
 
