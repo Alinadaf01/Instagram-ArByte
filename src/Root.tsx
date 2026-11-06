@@ -8,6 +8,7 @@ import {TRUST_DURATION, TRUST_MUSIC_START, TrustReel, TrustReelProps} from './tr
 import {Story} from './trust/Stories';
 import {I5vsI7, V2_MUSIC_START, V2Props} from './v2/I5vsI7';
 import {V2Cover} from './v2/Cover';
+import {Budget, V3_MUSIC_START, V3Props} from './v3/Budget';
 
 const v2Metadata: CalculateMetadataFunction<V2Props> = async ({props}) => {
   const [edit, analysis, cut] = await Promise.all([
@@ -20,6 +21,20 @@ const v2Metadata: CalculateMetadataFunction<V2Props> = async ({props}) => {
   return {
     durationInFrames: Math.round(duration * FPS),
     props: {...props, duration, words: edit?.words ?? [], segments: edit?.segments ?? [], beats: shift(analysis?.beats), downbeats: shift(analysis?.downbeats), cutStart: cut?.start ?? 0, cutEnd: cut?.end ?? 0},
+  };
+};
+
+const v3Metadata: CalculateMetadataFunction<V3Props> = async ({props}) => {
+  const [edit, analysis] = await Promise.all([
+    fetchJson<{duration: number; words: V3Props['words']; segments: V3Props['segments']}>('video3/edit.json'),
+    fetchJson<AudioAnalysis>('video2/music/analysis.json'),
+  ]);
+  const duration = edit?.duration ?? 24.7;
+  const total = duration + 0.6;
+  const shift = (xs?: number[]) => (xs ?? []).map((b) => b - V3_MUSIC_START).filter((b) => b >= -0.01 && b <= total);
+  return {
+    durationInFrames: Math.round(total * FPS),
+    props: {...props, duration, words: edit?.words ?? [], segments: edit?.segments ?? [], beats: shift(analysis?.beats), downbeats: shift(analysis?.downbeats)},
   };
 };
 
@@ -114,6 +129,16 @@ export const RemotionRoot: React.FC = () => (
     durationInFrames={FPS * 38}
     defaultProps={{duration: 38, words: [], segments: [], beats: [], downbeats: [], cutStart: 0, cutEnd: 0}}
     calculateMetadata={v2Metadata}
+  />
+  <Composition
+    id="Budget"
+    component={Budget}
+    fps={FPS}
+    width={WIDTH}
+    height={HEIGHT}
+    durationInFrames={FPS * 25}
+    defaultProps={{duration: 24.7, words: [], segments: [], beats: [], downbeats: []}}
+    calculateMetadata={v3Metadata}
   />
   <Composition id="V2Cover" component={V2Cover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} defaultProps={{at: 4.4}} />
   <Composition id="Story" component={Story} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} defaultProps={{index: 0}} />
