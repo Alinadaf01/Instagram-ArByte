@@ -3,7 +3,8 @@
 Inputs (public/video3/raw, not in git):
 * IMG_0402.MOV  – iPhone 4K HLG, the whole session (picture)
 * voice.ogg     – the phone-in-pocket voice recording (sound)
-* graded.mp4    – IMG_0402 scaled to 1080×1920 + GRADE (made once, below)
+* graded_user.mov – the same take, colour-graded by the presenter
+* plate.mp4     – graded_user.mov converted to SDR 1080×1920 (made once, below)
 
 The voice track runs SYNC seconds ahead of the camera clock (found by
 cross-correlating the camera audio with voice.ogg; no drift over 200s).
@@ -23,12 +24,12 @@ V3 = ROOT / "public" / "video3"
 RAW = V3 / "raw"
 SYNC = 1.158  # voice time = camera time + SYNC
 
-# HLG treated as Rec.709 (iPhone HLG is backward compatible) then: highlight
-# roll-off for the bright wall, a little warmth in the mids, more saturation
-GRADE = (
-    "curves=all='0/0 0.25/0.21 0.5/0.46 0.8/0.74 1/0.92',"
-    "colorbalance=rm=0.035:gm=0:bm=-0.025:rs=-0.01:bs=0.015,eq=saturation=1.18:contrast=1.05"
-)
+# The picture is the presenter's own grade (graded_user.mov, exported from
+# his phone, same clock as IMG_0402.MOV). No grading here: only the technical
+# HLG → SDR step — HLG is shown on its Rec.709-compatible curve and the
+# BT.2020 primaries are mapped to BT.709 so skin keeps its colour.
+SOURCE = "graded_user.mov"
+CONVERT = "colorspace=iall=bt2020:itrc=bt709:all=bt709:format=yuv420p"
 
 VOICE = (
     "highpass=f=80,"
@@ -71,19 +72,19 @@ def run(cmd):
     subprocess.run(cmd, check=True)
 
 
-def ensure_graded():
-    out = RAW / "graded.mp4"
+def ensure_plate():
+    out = RAW / "plate.mp4"
     if out.exists():
         return out
-    run(["ffmpeg", "-v", "error", "-y", "-i", str(RAW / "IMG_0402.MOV"), "-an",
-         "-vf", f"scale=1080:1920:flags=lanczos,{GRADE},format=yuv420p",
+    run(["ffmpeg", "-v", "error", "-y", "-i", str(RAW / SOURCE), "-an",
+         "-vf", f"{CONVERT},scale=1080:1920:flags=lanczos,format=yuv420p",
          "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
          "-c:v", "libx264", "-preset", "fast", "-crf", "14", "-threads", "3", str(out)])
     return out
 
 
 def main():
-    graded = ensure_graded()
+    graded = ensure_plate()
     vparts, aparts, labels = [], [], []
     segments, words = [], []
     t = 0.0
@@ -103,7 +104,7 @@ def main():
     n = len(EDL)
     graph = ";".join(vparts + aparts) + f";{''.join(labels)}concat=n={n}:v=1:a=1[v][a];[a]aformat=channel_layouts=mono,{VOICE}[voice]"
     run(["ffmpeg", "-v", "error", "-y", "-i", str(graded), "-i", str(RAW / "voice.ogg"), "-filter_complex", graph,
-         "-map", "[v]", "-c:v", "libx264", "-preset", "medium", "-threads", "3", "-crf", "15", "-movflags", "+faststart", "-an", str(V3 / "edit.mp4"),
+         "-map", "[v]", "-c:v", "libx264", "-preset", "medium", "-threads", "3", "-crf", "15", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-movflags", "+faststart", "-an", str(V3 / "edit.mp4"),
          "-map", "[voice]", "-ar", "48000", "-ac", "1", str(V3 / "voice.wav")])
     (V3 / "edit.json").write_text(json.dumps({"duration": round(t, 3), "segments": segments, "words": words}, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"edit: {t:.2f}s")

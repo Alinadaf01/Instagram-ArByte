@@ -577,8 +577,8 @@ export const Budget: React.FC<V3Props> = ({duration, words, segments, beats, dow
             {gapP > 0 ? (
               <AbsoluteFill style={{opacity: gapP, background: `radial-gradient(110% 70% at 50% 35%, ${tiers[Math.max(0, gapIdx >= 0 ? gapIdx : tierIdx)]?.t.deep ?? COLORS.neon}55, rgba(8,4,17,0.75) 75%)`}} />
             ) : null}
-            {/* vignette + top/bottom shade for text */}
-            <AbsoluteFill style={{background: 'linear-gradient(180deg, rgba(21,9,43,0.55) 0%, transparent 20%, transparent 62%, rgba(8,4,17,0.85) 100%)'}} />
+            {/* light top/bottom shade for UI legibility only — the picture keeps the presenter's own grade */}
+            <AbsoluteFill style={{background: 'linear-gradient(180deg, rgba(21,9,43,0.3) 0%, transparent 14%, transparent 74%, rgba(8,4,17,0.6) 100%)'}} />
 
             {/* ── wall: behind the head ── */}
             <Sequence durationInFrames={f(hook.end) + 2} layout="none">
