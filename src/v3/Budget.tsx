@@ -22,7 +22,7 @@ loadFonts();
 
 export const V3_MUSIC_START = 16.48; // same Midnight City cut as reel #2
 const MUSIC_SRC = 'video2/music/mc_cut.mp3';
-const GOLD = '#FFC53D';
+export const GOLD = '#FFC53D';
 const TAIL = 0.6;
 
 export type Word = {word: string; start: number; end: number; seg: string};
@@ -35,7 +35,7 @@ const sp = (frame: number, at: number, damping = 15, stiffness = 130) => spring(
 const ease = (t: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
 
 type Spec = {icon: React.FC<{size?: number; color?: string; strokeWidth?: number}>; label: string; value: string; sub?: string};
-type Tier = {
+export type Tier = {
   seg: string;
   gap: string;
   n: string;
@@ -48,7 +48,7 @@ type Tier = {
   specs: Spec[];
 };
 
-const TIERS: Tier[] = [
+export const TIERS: Tier[] = [
   {
     seg: 'm1',
     gap: 'p1',
@@ -118,7 +118,7 @@ const TIERS: Tier[] = [
 // ── product art ───────────────────────────────────────────────────────────
 // Pro 7 / 7+ share the chassis, so both come from the official Pro 7+ 360°
 // turntable (public/surface/spin): Pro 7 is a still angle, Pro 7+ spins.
-const Product: React.FC<{img: Tier['img']; w: number; local: number; color: string}> = ({img, w, local, color}) => {
+export const Product: React.FC<{img: Tier['img']; w: number; local: number; color: string}> = ({img, w, local, color}) => {
   const bass = useBass();
   const glow = `drop-shadow(0 0 ${30 + bass * 40}px ${color}AA) drop-shadow(0 30px 40px rgba(0,0,0,0.55))`;
   if (img === 'sls2') {

@@ -9,6 +9,7 @@ import {Story} from './trust/Stories';
 import {I5vsI7, V2_MUSIC_START, V2Props} from './v2/I5vsI7';
 import {V2Cover} from './v2/Cover';
 import {Budget, V3_MUSIC_START, V3Props} from './v3/Budget';
+import {BudgetCover, BudgetStory} from './v3/CoverStory';
 
 const v2Metadata: CalculateMetadataFunction<V2Props> = async ({props}) => {
   const [edit, analysis, cut] = await Promise.all([
@@ -140,6 +141,8 @@ export const RemotionRoot: React.FC = () => (
     defaultProps={{duration: 24.7, words: [], segments: [], beats: [], downbeats: []}}
     calculateMetadata={v3Metadata}
   />
+  <Composition id="BudgetCover" component={BudgetCover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
+  <Composition id="BudgetStory" component={BudgetStory} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="V2Cover" component={V2Cover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} defaultProps={{at: 4.4}} />
   <Composition id="Story" component={Story} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} defaultProps={{index: 0}} />
   </>
