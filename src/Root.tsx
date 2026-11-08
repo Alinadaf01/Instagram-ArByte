@@ -10,6 +10,8 @@ import {I5vsI7, V2_MUSIC_START, V2Props} from './v2/I5vsI7';
 import {V2Cover} from './v2/Cover';
 import {Budget, V3_MUSIC_START, V3Props} from './v3/Budget';
 import {BudgetCover, BudgetStory} from './v3/CoverStory';
+import {SurfaceId, V4_MUSIC_START, V4Props} from './v4/SurfaceId';
+import {SurfaceCover} from './v4/Cover';
 
 const v2Metadata: CalculateMetadataFunction<V2Props> = async ({props}) => {
   const [edit, analysis, cut] = await Promise.all([
@@ -37,6 +39,21 @@ const v3Metadata: CalculateMetadataFunction<V3Props> = async ({props}) => {
     durationInFrames: Math.round(total * FPS),
     props: {...props, duration, words: edit?.words ?? [], segments: edit?.segments ?? [], beats: shift(analysis?.beats), downbeats: shift(analysis?.downbeats)},
   };
+};
+
+const v4Metadata: CalculateMetadataFunction<V4Props> = async ({props}) => {
+  const [edit, mb] = await Promise.all([
+    fetchJson<{duration: number; words: V4Props['words']; segments: V4Props['segments']}>('video4/edit.json'),
+    fetchJson<{beats: number[]}>('video4/music_beats.json'),
+  ]);
+  const duration = edit?.duration ?? 43.8;
+  const total = duration + 0.7;
+  const all = mb?.beats ?? [];
+  // the drop (first beat after the music start) is a downbeat
+  const d0 = all.findIndex((b) => b >= V4_MUSIC_START - 0.05);
+  const beats = all.map((b) => b - V4_MUSIC_START).filter((b) => b >= -0.01 && b <= total);
+  const downbeats = all.filter((_, i) => i >= d0 && (i - d0) % 4 === 0).map((b) => b - V4_MUSIC_START).filter((b) => b <= total);
+  return {durationInFrames: Math.round(total * FPS), props: {...props, duration, words: edit?.words ?? [], segments: edit?.segments ?? [], beats, downbeats}};
 };
 
 // beats of music.mp3 re-based to a reel that starts `start` seconds into it
@@ -141,6 +158,17 @@ export const RemotionRoot: React.FC = () => (
     defaultProps={{duration: 24.7, words: [], segments: [], beats: [], downbeats: []}}
     calculateMetadata={v3Metadata}
   />
+  <Composition
+    id="SurfaceId"
+    component={SurfaceId}
+    fps={FPS}
+    width={WIDTH}
+    height={HEIGHT}
+    durationInFrames={FPS * 44}
+    defaultProps={{duration: 43.8, words: [], segments: [], beats: [], downbeats: []}}
+    calculateMetadata={v4Metadata}
+  />
+  <Composition id="SurfaceCover" component={SurfaceCover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="BudgetCover" component={BudgetCover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="BudgetStory" component={BudgetStory} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="V2Cover" component={V2Cover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} defaultProps={{at: 4.4}} />
