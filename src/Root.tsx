@@ -12,6 +12,8 @@ import {Budget, V3_MUSIC_START, V3Props} from './v3/Budget';
 import {BudgetCover, BudgetStory} from './v3/CoverStory';
 import {SurfaceId, V4_MUSIC_START, V4Props} from './v4/SurfaceId';
 import {SurfaceCover} from './v4/Cover';
+import {CTA_LEN, I5Gen11, V5_MUSIC_START, V5Props} from './v5/I5Gen11';
+import {I5Cover} from './v5/Cover';
 
 const v2Metadata: CalculateMetadataFunction<V2Props> = async ({props}) => {
   const [edit, analysis, cut] = await Promise.all([
@@ -53,6 +55,20 @@ const v4Metadata: CalculateMetadataFunction<V4Props> = async ({props}) => {
   const d0 = all.findIndex((b) => b >= V4_MUSIC_START - 0.05);
   const beats = all.map((b) => b - V4_MUSIC_START).filter((b) => b >= -0.01 && b <= total);
   const downbeats = all.filter((_, i) => i >= d0 && (i - d0) % 4 === 0).map((b) => b - V4_MUSIC_START).filter((b) => b <= total);
+  return {durationInFrames: Math.round(total * FPS), props: {...props, duration, words: edit?.words ?? [], segments: edit?.segments ?? [], beats, downbeats}};
+};
+
+const v5Metadata: CalculateMetadataFunction<V5Props> = async ({props}) => {
+  const [edit, mb] = await Promise.all([
+    fetchJson<{duration: number; words: V5Props['words']; segments: V5Props['segments']}>('video5/edit.json'),
+    fetchJson<{beats: number[]}>('video5/music_beats.json'),
+  ]);
+  const duration = edit?.duration ?? 26;
+  const total = duration + CTA_LEN;
+  const all = mb?.beats ?? [];
+  const d0 = all.findIndex((b) => b >= V5_MUSIC_START - 0.05);
+  const beats = all.map((b) => b - V5_MUSIC_START).filter((b) => b >= -0.01 && b <= total);
+  const downbeats = all.filter((_, i) => i >= d0 && (i - d0) % 4 === 0).map((b) => b - V5_MUSIC_START).filter((b) => b <= total);
   return {durationInFrames: Math.round(total * FPS), props: {...props, duration, words: edit?.words ?? [], segments: edit?.segments ?? [], beats, downbeats}};
 };
 
@@ -168,6 +184,17 @@ export const RemotionRoot: React.FC = () => (
     defaultProps={{duration: 43.8, words: [], segments: [], beats: [], downbeats: []}}
     calculateMetadata={v4Metadata}
   />
+  <Composition
+    id="I5Gen11"
+    component={I5Gen11}
+    fps={FPS}
+    width={WIDTH}
+    height={HEIGHT}
+    durationInFrames={FPS * 30}
+    defaultProps={{duration: 26, words: [], segments: [], beats: [], downbeats: []}}
+    calculateMetadata={v5Metadata}
+  />
+  <Composition id="I5Cover" component={I5Cover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="SurfaceCover" component={SurfaceCover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="BudgetCover" component={BudgetCover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="BudgetStory" component={BudgetStory} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
