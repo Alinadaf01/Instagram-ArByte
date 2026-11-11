@@ -14,6 +14,7 @@ import {SurfaceId, V4_MUSIC_START, V4Props} from './v4/SurfaceId';
 import {SurfaceCover} from './v4/Cover';
 import {CTA_LEN, I5Gen11, V5_MUSIC_START, V5Props} from './v5/I5Gen11';
 import {I5Cover} from './v5/Cover';
+import {PriceList} from './lists/PriceList';
 
 const v2Metadata: CalculateMetadataFunction<V2Props> = async ({props}) => {
   const [edit, analysis, cut] = await Promise.all([
@@ -194,6 +195,7 @@ export const RemotionRoot: React.FC = () => (
     defaultProps={{duration: 26, words: [], segments: [], beats: [], downbeats: []}}
     calculateMetadata={v5Metadata}
   />
+  <Composition id="PriceList" component={PriceList} fps={FPS} width={1080} height={1350} durationInFrames={1} />
   <Composition id="I5Cover" component={I5Cover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="SurfaceCover" component={SurfaceCover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="BudgetCover" component={BudgetCover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
