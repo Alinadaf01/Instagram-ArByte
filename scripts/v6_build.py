@@ -148,7 +148,10 @@ def main():
                     words.append({"word": w[0], "start": round(o + s - p, 3), "end": round(o + min(e, q) - p, 3), "seg": name})
                     break
         segments.append({"name": name, "start": round(seg_start, 3), "end": round(t, 3), "sync": round(float(off), 4), "cuts": [round(o, 3) for _, _, o in mapped[1:]]})
-    graph = ";".join(vparts + aparts) + f";{''.join(labels)}concat=n={k}:v=1:a=1[v][a];[a]aformat=channel_layouts=mono,{VOICE}[voice]"
+    # «کنیم» trails off quietly: lift the last word a little so the music never covers it
+    lw = words[-1]
+    lift = f",volume=enable='between(t,{lw['start'] - 0.02:.3f},{t:.3f})':volume=2.1"
+    graph = ";".join(vparts + aparts) + f";{''.join(labels)}concat=n={k}:v=1:a=1[v][a];[a]aformat=channel_layouts=mono,{VOICE}{lift}[voice]"
     run(["ffmpeg", "-v", "error", "-y", *inputs, "-i", str(RAW / "voice.m4a"), "-filter_complex", graph,
          "-map", "[v]", "-c:v", "libx264", "-preset", "medium", "-threads", "3", "-crf", "15",
          "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-movflags", "+faststart", "-an", str(V6 / "edit.mp4"),

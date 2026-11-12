@@ -29,7 +29,7 @@ const HOT = '#FF3B5C';
 const CYAN = '#22D3EE';
 const GOLD = '#FFC53D';
 const VIOLET = '#B57BFF';
-export const TAIL6 = 0.6;
+export const TAIL6 = 0.9;
 
 export type Word = {word: string; start: number; end: number; seg: string};
 export type Seg = {name: string; start: number; end: number; cuts?: number[]};
@@ -360,6 +360,24 @@ const CtaWall: React.FC<{c: {start: number; send: number; comment: number; list:
   );
 };
 
+// ── end card over the last half-second (no frozen face at the end) ───────
+const EndCard: React.FC<{start: number}> = ({start}) => {
+  const frame = useCurrentFrame();
+  const bass = useBass();
+  const p = interpolate(frame - start, [0, 8], [0, 1], clamp);
+  const s1 = sp(frame, start + 2, 12, 170);
+  return (
+    <AbsoluteFill style={{zIndex: 48}}>
+      <AbsoluteFill style={{background: 'radial-gradient(80% 60% at 50% 45%, rgba(30,10,60,0.9), rgba(8,4,17,0.96))', opacity: p}} />
+      <div dir="rtl" style={{position: 'absolute', top: 640, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 26, transform: `scale(${0.7 + s1 * 0.3})`, opacity: p}}>
+        <div style={{fontSize: 64, fontWeight: 900, color: '#fff', textShadow: `0 0 24px ${COLORS.neon}`}}>کامنت کن 👇</div>
+        <div style={{padding: '18px 60px', borderRadius: 999, background: `linear-gradient(135deg, ${COLORS.neonHot}, ${COLORS.neon})`, boxShadow: `0 0 ${50 + bass * 40}px ${COLORS.neon}`, fontSize: 120, fontWeight: 900, color: '#fff'}}>گیمینگ</div>
+        <div style={{fontSize: 46, fontWeight: 900, color: GOLD, textShadow: `0 0 18px ${GOLD}`}}>📋 لیست موجودی + قیمت روز تو دایرکتت</div>
+      </div>
+    </AbsoluteFill>
+  );
+};
+
 // ── captions ─────────────────────────────────────────────────────────────
 const kwColor = (w: string): string | null => {
   const n = normalize(w);
@@ -482,7 +500,9 @@ export const Gaming: React.FC<V6Props> = ({duration, words, segments, beats, dow
   const overshoot = interpolate(since, [0, 4, 12], [1.05, 0.99, 1], clamp);
   const punches = [c.hook.farq, c.cta.send, c.cta.comment];
   const punch = punches.reduce((a, p) => a + (frame >= p && frame < p + 50 ? sp(frame, p, 14, 170) * 0.06 * interpolate(frame - p, [34, 50], [1, 0], clamp) : 0), 0);
-  const zoom = (frame < 12 ? open : 1) * base * overshoot + punch;
+  const holdFrom = f(duration - 0.36); // edit.mp4 holds its last good frame from here (v6_build FREEZE_AT)
+  const hold = frame >= holdFrom ? interpolate(frame, [holdFrom, total], [0, 0.07], clamp) : 0;
+  const zoom = (frame < 12 ? open : 1) * base * overshoot + punch + hold;
 
   const box = {x: lerp(0, CIRCLE.x, pip), y: lerp(0, CIRCLE.y, pip), w: lerp(1080, CIRCLE.d, pip), h: lerp(1920, CIRCLE.d, pip), r: lerp(0, CIRCLE.d / 2, pip)};
   const sc = lerp(zoom, CIRCLE.d / FACE_SPAN, pip);
@@ -503,9 +523,12 @@ export const Gaming: React.FC<V6Props> = ({duration, words, segments, beats, dow
     for (let i = -8; i <= 8; i++) {
       const t = (fr + i) / FPS;
       const on = talk.some(([a, b]) => t >= a && t <= b);
-      const b0 = t < 0.1 ? 0.6 : on ? 0.13 : 0.26;
+      const last = words[words.length - 1];
+      const lastEnd = last ? last.end : duration;
+      // the last word («کنیم») is soft: duck the music hard under it
+      const b0 = t < 0.1 ? 0.6 : last && t > last.start - 0.15 ? 0.05 : on ? 0.12 : 0.26;
       const tot = duration + TAIL6;
-      s += t > tot - 0.6 ? b0 * Math.max(0, (tot - t) / 0.6) : b0;
+      s += t > lastEnd ? b0 * Math.max(0, 1 - (t - lastEnd) / (tot - lastEnd)) : b0;
     }
     return s / 17;
   };
@@ -556,6 +579,7 @@ export const Gaming: React.FC<V6Props> = ({duration, words, segments, beats, dow
             {frame >= c.n3.start - 2 && frame < c.cta.start ? <HzStage c={c.n3} /> : null}
 
             <Captions words={words} hideFrom={c.cta.comment - 4} />
+            {frame >= f(duration) - 4 ? <EndCard start={f(duration) - 4} /> : null}
           </AbsoluteFill>
           {flash > 0 ? <AbsoluteFill style={{background: 'radial-gradient(circle, rgba(255,255,255,0.9), rgba(118,227,90,0.4) 45%, transparent 80%)', opacity: flash, mixBlendMode: 'screen', zIndex: 50}} /> : null}
 
