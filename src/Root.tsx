@@ -15,6 +15,8 @@ import {SurfaceCover} from './v4/Cover';
 import {CTA_LEN, I5Gen11, V5_MUSIC_START, V5Props} from './v5/I5Gen11';
 import {I5Cover} from './v5/Cover';
 import {PriceList} from './lists/PriceList';
+import {Gaming, TAIL6, V6_MUSIC_START, V6Props} from './v6/Gaming';
+import {GamingCover} from './v6/Cover';
 
 const v2Metadata: CalculateMetadataFunction<V2Props> = async ({props}) => {
   const [edit, analysis, cut] = await Promise.all([
@@ -70,6 +72,20 @@ const v5Metadata: CalculateMetadataFunction<V5Props> = async ({props}) => {
   const d0 = all.findIndex((b) => b >= V5_MUSIC_START - 0.05);
   const beats = all.map((b) => b - V5_MUSIC_START).filter((b) => b >= -0.01 && b <= total);
   const downbeats = all.filter((_, i) => i >= d0 && (i - d0) % 4 === 0).map((b) => b - V5_MUSIC_START).filter((b) => b <= total);
+  return {durationInFrames: Math.round(total * FPS), props: {...props, duration, words: edit?.words ?? [], segments: edit?.segments ?? [], beats, downbeats}};
+};
+
+const v6Metadata: CalculateMetadataFunction<V6Props> = async ({props}) => {
+  const [edit, mb] = await Promise.all([
+    fetchJson<{duration: number; words: V6Props['words']; segments: V6Props['segments']}>('video6/edit.json'),
+    fetchJson<{beats: number[]}>('video6/music_beats.json'),
+  ]);
+  const duration = edit?.duration ?? 23.6;
+  const total = duration + TAIL6;
+  const all = mb?.beats ?? [];
+  const d0 = all.findIndex((b) => b >= V6_MUSIC_START - 0.05);
+  const beats = all.map((b) => b - V6_MUSIC_START).filter((b) => b >= -0.01 && b <= total);
+  const downbeats = all.filter((_, i) => i >= d0 && (i - d0) % 4 === 0).map((b) => b - V6_MUSIC_START).filter((b) => b <= total);
   return {durationInFrames: Math.round(total * FPS), props: {...props, duration, words: edit?.words ?? [], segments: edit?.segments ?? [], beats, downbeats}};
 };
 
@@ -195,6 +211,17 @@ export const RemotionRoot: React.FC = () => (
     defaultProps={{duration: 26, words: [], segments: [], beats: [], downbeats: []}}
     calculateMetadata={v5Metadata}
   />
+  <Composition
+    id="Gaming"
+    component={Gaming}
+    fps={FPS}
+    width={WIDTH}
+    height={HEIGHT}
+    durationInFrames={FPS * 25}
+    defaultProps={{duration: 23.6, words: [], segments: [], beats: [], downbeats: []}}
+    calculateMetadata={v6Metadata}
+  />
+  <Composition id="GamingCover" component={GamingCover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="PriceList" component={PriceList} fps={FPS} width={1080} height={1350} durationInFrames={1} />
   <Composition id="I5Cover" component={I5Cover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="SurfaceCover" component={SurfaceCover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />

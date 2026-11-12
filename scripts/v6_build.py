@@ -1,0 +1,159 @@
+"""Reel #6 («چک‌لیست گیمینگ») — cut the desk take + separate voice.
+
+Inputs (public/video6/raw, not in git):
+* IMG_0403.MOV – iPhone 4K HLG, already colour-graded by the presenter
+* voice.m4a    – separate voice recording (phone in pocket)
+
+The presenter's grade is kept: only the technical HLG/BT.2020 → SDR/BT.709
+conversion is applied. Each line is the best take (chosen by hand from the
+large-v3 transcript, onsets checked on the waveform); pauses longer than
+GAP_MAX inside a line are shortened to GAP_KEEP, picture and sound together.
+
+Outputs: public/video6/edit.mp4, voice.wav, edit.json (segments + words).
+"""
+import json
+import subprocess
+from pathlib import Path
+
+import numpy as np
+import soundfile as sf
+from scipy.signal import fftconvolve
+
+ROOT = Path(__file__).resolve().parent.parent
+V6 = ROOT / "public" / "video6"
+RAW = V6 / "raw"
+CONVERT = "colorspace=iall=bt2020:itrc=bt709:all=bt709:format=yuv420p"
+SYNC = -0.400  # voice clock = camera clock + SYNC (refined per line below)
+GAP_MAX, GAP_KEEP = 0.28, 0.14
+
+VOICE = (
+    "highpass=f=80,"
+    "equalizer=f=220:t=q:w=1.2:g=-2.5,"
+    "equalizer=f=3200:t=q:w=1.4:g=2.5,"
+    "equalizer=f=9000:t=h:w=0.7:g=1.5,"
+    "acompressor=threshold=-20dB:ratio=2.5:attack=12:release=180:makeup=3,"
+    "loudnorm=I=-16:TP=-1.5:LRA=7"
+)
+
+# (name, voice-clock range of the chosen take) — onsets from the waveform
+EDL = [
+    ("hook", (73.62, 76.36)),
+    ("n1", (124.05, 130.25)),
+    ("n2", (130.88, 135.08)),
+    ("n3", (137.25, 140.95)),
+    ("cta1", (141.98, 145.36)),
+    ("cta2", (155.32, 159.25)),
+]
+
+# corrected subtitle words (voice clock)
+WORDS = {
+    "hook": [("دو", 73.70), ("تا", 73.81), ("لپ‌تاپ", 73.93), ("با", 74.23), ("یه", 74.39), ("کارت‌گرافیک", 74.49), ("می‌تونن", 75.01),
+             ("کلی", 75.31), ("با", 75.57), ("هم", 75.75), ("فرق", 75.79), ("داشته", 76.05), ("باشن!", 76.20, 76.36)],
+    "n1": [("یک:", 124.10), ("فقط", 124.41), ("RTX‌ش", 124.75), ("رو", 125.10), ("نبین؛", 125.33), ("ببین", 125.61), ("TGP‌ش", 125.99), ("چند", 126.47),
+           ("واته.", 126.77), ("تعیین", 127.03), ("می‌کنه", 127.81), ("چقدر", 128.13), ("از", 128.53), ("قدرت", 128.67), ("گرافیک", 128.93),
+           ("واقعاً", 129.33), ("بهت", 129.63), ("می‌رسه.", 129.85, 130.20)],
+    "n2": [("دو:", 130.95), ("رمش", 131.26), ("دوکاناله", 131.80), ("باشه،", 132.34), ("اسلات", 132.68), ("خالی", 133.38), ("برای", 133.78),
+           ("ارتقا", 134.02), ("داشته", 134.46), ("باشه.", 134.80, 135.05)],
+    "n3": [("سه:", 137.30), ("صفحه‌ی", 137.88), ("۱۴۴", 138.28), ("هرتز؛", 138.62), ("تفاوتشو", 139.32), ("با", 140.04), ("چشم", 140.24),
+           ("می‌بینی.", 140.52, 140.90)],
+    "cta1": [("این", 142.10), ("ویدیو", 142.34), ("رو", 142.58), ("برای", 142.76), ("رفیقت", 142.94), ("که", 143.48), ("می‌خواد", 143.54),
+             ("لپ‌تاپ", 143.76), ("گیمینگ", 144.04), ("بخره", 144.56), ("بفرست.", 144.88, 145.30)],
+    "cta2": [("کلمه‌ی", 155.45), ("«گیمینگ»", 156.10), ("رو", 156.62), ("کامنت", 156.78), ("کن", 157.09), ("تا", 157.25), ("لیست", 157.44),
+             ("موجودی", 157.63), ("رو", 158.13), ("برات", 158.22), ("ارسال", 158.46), ("کنیم.", 158.91, 159.20)],
+}
+
+
+def run(cmd):
+    subprocess.run(cmd, check=True)
+
+
+def local_sync(cam, vo, a, b, sr=16000):
+    """camera offset for the voice range [a, b] (± 60 ms around SYNC)"""
+    va = vo[int(a * sr):int(b * sr)]
+    ca = a - SYNC
+    pad = int(0.06 * sr)
+    ref = cam[int(ca * sr) - pad:int(ca * sr) + len(va) + pad]
+    c = fftconvolve(ref, va[::-1], mode="valid")
+    return SYNC - (np.argmax(c) - pad) / sr
+
+
+def keep_ranges(vo, a, b, sr=16000):
+    """split [a, b] at pauses longer than GAP_MAX (frame RMS < -38 dBFS)"""
+    hop = int(0.01 * sr)
+    x = vo[int(a * sr):int(b * sr)]
+    n = len(x) // hop
+    db = 20 * np.log10(np.sqrt((x[: n * hop].reshape(n, hop) ** 2).mean(1)) + 1e-9)
+    quiet = db < -38
+    out, s, i = [], 0.0, 0
+    while i < n:
+        if quiet[i]:
+            j = i
+            while j < n and quiet[j]:
+                j += 1
+            g0, g1 = i * 0.01, j * 0.01
+            if g1 - g0 > GAP_MAX and g0 > 0.05 and j < n:
+                half = GAP_KEEP / 2
+                out.append((a + s, a + g0 + half))
+                s = g1 - half
+            i = j
+        else:
+            i += 1
+    out.append((a + s, b))
+    return [(round(p, 3), round(q, 3)) for p, q in out if q - p > 0.05]
+
+
+def clip_for(name, ca, cb):
+    """converted 1080×1920 clip of camera range [ca-1, cb+1] (only what we use)"""
+    out = RAW / f"clip_{name}.mp4"
+    start = max(0.0, ca - 1.0)
+    if not out.exists():
+        run(["ffmpeg", "-v", "error", "-y", "-ss", f"{start:.3f}", "-i", str(RAW / "IMG_0403.MOV"), "-t", f"{cb - ca + 2:.3f}", "-an",
+             "-vf", f"{CONVERT},scale=1080:1920:flags=lanczos,format=yuv420p",
+             "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
+             "-c:v", "libx264", "-preset", "fast", "-crf", "14", "-threads", "3", str(out)])
+    return out, start
+
+
+def main():
+    cam, _ = sf.read(RAW / "cam16k.wav")
+    vo, _ = sf.read(RAW / "vo16k.wav")
+    vparts, aparts, labels, segments, words = [], [], [], [], []
+    t, k = 0.0, 0
+    inputs = []
+    for idx, (name, (a, b)) in enumerate(EDL):
+        off = local_sync(cam, vo, a, b)
+        clip, cstart = clip_for(name, a - off, b - off)
+        inputs += ["-i", str(clip)]
+        seg_start = t
+        mapped = []
+        for p, q in keep_ranges(vo, a, b):
+            d = q - p
+            vparts.append(f"[{idx}:v]trim={p - off - cstart:.3f}:{q - off - cstart:.3f},setpts=PTS-STARTPTS,fps=30[v{k}]")
+            aparts.append(f"[{len(EDL)}:a]atrim={p:.3f}:{q:.3f},asetpts=PTS-STARTPTS,afade=t=in:d=0.012,afade=t=out:st={d - 0.015:.3f}:d=0.015[a{k}]")
+            labels.append(f"[v{k}][a{k}]")
+            mapped.append((p, q, t))
+            t += d
+            k += 1
+        for i, w in enumerate(WORDS[name]):
+            s = w[1]
+            e = w[2] if len(w) > 2 else WORDS[name][i + 1][1]
+            for p, q, o in mapped:
+                if s < p:
+                    s = p
+                if p <= s <= q:
+                    words.append({"word": w[0], "start": round(o + s - p, 3), "end": round(o + min(e, q) - p, 3), "seg": name})
+                    break
+        segments.append({"name": name, "start": round(seg_start, 3), "end": round(t, 3), "sync": round(float(off), 4), "cuts": [round(o, 3) for _, _, o in mapped[1:]]})
+    graph = ";".join(vparts + aparts) + f";{''.join(labels)}concat=n={k}:v=1:a=1[v][a];[a]aformat=channel_layouts=mono,{VOICE}[voice]"
+    run(["ffmpeg", "-v", "error", "-y", *inputs, "-i", str(RAW / "voice.m4a"), "-filter_complex", graph,
+         "-map", "[v]", "-c:v", "libx264", "-preset", "medium", "-threads", "3", "-crf", "15",
+         "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-movflags", "+faststart", "-an", str(V6 / "edit.mp4"),
+         "-map", "[voice]", "-ar", "48000", "-ac", "1", str(V6 / "voice.wav")])
+    (V6 / "edit.json").write_text(json.dumps({"duration": round(t, 3), "segments": segments, "words": words}, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"edit: {t:.2f}s")
+    for s in segments:
+        print(s)
+
+
+if __name__ == "__main__":
+    main()
