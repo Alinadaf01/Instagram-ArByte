@@ -22,7 +22,7 @@ loadFonts();
 // Gaming accents: RTX green, hot red; brand violet stays the base.
 // ─────────────────────────────────────────────────────────────────────────
 
-export const V6_MUSIC_START = 104.04;
+export const V6_MUSIC_START = 35.17; // «After Hours» (instrumental): frame 0 on the drop
 const MUSIC_SRC = 'video6/music.mp3';
 const RTX = '#76E35A';
 const HOT = '#FF3B5C';
@@ -124,7 +124,7 @@ const TgpStage: React.FC<{c: {start: number; rtx: number; tgp: number; watt: num
   const frame = useCurrentFrame();
   const bass = useBass();
   const out = interpolate(frame, [c.end - 8, c.end], [1, 0], clamp);
-  const strike = interpolate(frame, [c.rtx + 18, c.rtx + 30], [0, 1], clamp);
+  const strike = interpolate(frame, [c.rtx + 14, c.rtx + 26], [0, 1], clamp);
   const gIn = sp(frame, c.tgp - 6, 14, 140);
   const bars = sp(frame, c.power, 18, 90);
   const gauge = (watts: number, color: string, label: string, delay: number) => {
@@ -152,7 +152,7 @@ const TgpStage: React.FC<{c: {start: number; rtx: number; tgp: number; watt: num
       {/* «فقط اسم RTX رو نبین» */}
       {frame < c.tgp + 6 ? (
         <div style={{position: 'absolute', top: 640, left: 0, right: 0, display: 'flex', justifyContent: 'center', opacity: 1 - interpolate(frame, [c.tgp - 4, c.tgp + 6], [0, 1], clamp)}}>
-          <div style={{position: 'relative', transform: `scale(${slamAt(frame, c.rtx - 4)})`}}>
+          <div style={{position: 'relative', transform: `scale(${slamAt(frame, c.start)})`}}>
             <div style={{padding: '10px 40px', borderRadius: 20, background: '#0b0b10', border: `4px solid ${RTX}`, boxShadow: `0 0 30px ${RTX}`, fontSize: 130, fontWeight: 900, color: RTX, ...LTR}}>RTX 4060</div>
             <div style={{position: 'absolute', left: -20, right: -20, top: '50%', height: 16, borderRadius: 8, background: HOT, boxShadow: `0 0 20px ${HOT}`, transform: `scaleX(${strike}) rotate(-8deg)`, transformOrigin: 'right'}} />
           </div>
@@ -300,24 +300,27 @@ const CtaWall: React.FC<{c: {start: number; send: number; comment: number; list:
   const dm = sp(frame, c.list - 2, 13, 160);
   return (
     <AbsoluteFill>
-      {/* recap card behind the head */}
-      <div dir="rtl" style={{position: 'absolute', top: 230, left: 110, right: 110, transform: `translateY(${(1 - card) * -140}px)`, opacity: card}}>
-        <Glass radius={32} style={{padding: '20px 28px'}} glow={0.5 + bass * 0.3}>
-          <div style={{fontSize: 44, fontWeight: 900, color: '#fff', marginBottom: 8}}>
-            🎮 چک‌لیست خرید <span style={{color: RTX}}>گیمینگ</span>
+      {/* recap card behind the head: solid dark panel so it reads on the bright wall */}
+      <div dir="rtl" style={{position: 'absolute', top: 215, left: 70, right: 70, transform: `translateY(${(1 - card) * -140}px) scale(${0.9 + card * 0.1})`, opacity: card}}>
+        <div style={{borderRadius: 36, padding: '22px 30px 18px', background: 'linear-gradient(160deg, rgba(14,6,30,0.94), rgba(30,10,60,0.92))', border: `3px solid ${VIOLET}`, boxShadow: `0 0 ${36 + bass * 30}px ${VIOLET}AA, 0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.25)`}}>
+          <div style={{display: 'flex', alignItems: 'center', gap: 14, fontSize: 50, fontWeight: 900, color: '#fff', marginBottom: 10, paddingBottom: 12, borderBottom: '2px solid rgba(255,255,255,0.15)'}}>
+            🎮 چک‌لیست خرید <span style={{color: GOLD, textShadow: `0 0 18px ${GOLD}`}}>لپ‌تاپ گیمینگ</span>
           </div>
           {items.map(([ic, t], i) => {
             const at = c.start + 10 + i * 9;
             const p = sp(frame, at, 12, 200);
+            const on = frame >= at;
             return (
-              <div key={t} style={{display: 'flex', alignItems: 'center', gap: 14, height: 64, opacity: frame >= at ? 1 : 0.3}}>
-                <CheckCircle2 size={40} color={frame >= at ? RTX : 'rgba(255,255,255,0.4)'} style={{transform: `scale(${frame >= at ? 0.6 + p * 0.4 : 1})`}} />
+              <div key={t} style={{display: 'flex', alignItems: 'center', gap: 16, height: 76, opacity: on ? 1 : 0.35, transform: `translateX(${on ? 0 : 30}px)`}}>
+                <div style={{width: 54, height: 54, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', background: on ? GOLD : 'rgba(255,255,255,0.12)', boxShadow: on ? `0 0 18px ${GOLD}` : 'none', transform: `scale(${on ? 0.6 + p * 0.4 : 1})`}}>
+                  <CheckCircle2 size={38} color={on ? '#1a0b2e' : 'rgba(255,255,255,0.5)'} strokeWidth={2.6} />
+                </div>
                 {ic}
-                <span style={{fontSize: 38, fontWeight: 800, color: '#fff'}}>{t}</span>
+                <span style={{fontSize: 44, fontWeight: 900, color: '#fff'}}>{t}</span>
               </div>
             );
           })}
-        </Glass>
+        </div>
       </div>
       {sendP > 0 && frame < c.comment - 4 ? (
         <div style={{position: 'absolute', top: 1250, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `scale(${sendP * (1 + 0.06 * Math.sin(frame * 0.3))})`}}>
@@ -448,7 +451,7 @@ export const Gaming: React.FC<V6Props> = ({duration, words, segments, beats, dow
     const w = ws[nth] ?? ws[0];
     return f(w ? w.start : fb);
   };
-  const S = {hook: seg('hook'), n1: seg('n1'), n2: seg('n2'), n3: seg('n3'), cta1: seg('cta1'), cta2: seg('cta2')};
+  const S = {hook: seg('hook'), n1: seg('n1'), n2: seg('n2'), n3: seg('n3'), cta: seg('cta')};
   const total = f(duration + TAIL6);
 
   const c = {
@@ -456,7 +459,7 @@ export const Gaming: React.FC<V6Props> = ({duration, words, segments, beats, dow
     n1: {start: f(S.n1.start), rtx: cue('n1', ['rtx'], 3.44), tgp: cue('n1', ['tgp'], 4.68), watt: cue('n1', ['واته'], 5.46), power: cue('n1', ['قدرت'], 7.11), end: f(S.n1.end)},
     n2: {start: f(S.n2.start), dual: cue('n2', ['دوکاناله'], 9.61), slot: cue('n2', ['اسلات'], 10.49), end: f(S.n2.end)},
     n3: {start: f(S.n3.start), hz: cue('n3', ['۱۴۴'], 13.92), eye: cue('n3', ['چشم'], 15.88), end: f(S.n3.end)},
-    cta: {start: f(S.cta1.start), send: cue('cta1', ['بفرست'], 19.49), comment: cue('cta2', ['کامنت'], 21.13), list: cue('cta2', ['لیست'], 21.79), end: total},
+    cta: {start: f(S.cta.start), send: cue('cta', ['بفرست'], 19.2), comment: cue('cta', ['کامنت'], 21.0), list: cue('cta', ['لیست'], 21.7), end: total},
   };
 
   const pipStart = c.n1.start;
