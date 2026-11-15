@@ -20,7 +20,7 @@ loadFonts();
 // Music: «After Hours» (instrumental), a different section than reel #6.
 // ─────────────────────────────────────────────────────────────────────────
 
-export const V7_MUSIC_START = 70.0; // set once the track is back (see Root)
+export const V7_MUSIC_START = 70.52; // phrase start 2×8 bars after the 35.2s drop used in reel #6
 const MUSIC_SRC = 'video7/music.mp3';
 const GOLD = '#FFC53D';
 const CYAN = '#22D3EE';
@@ -615,7 +615,7 @@ export const Qc: React.FC<V7Props> = ({duration, words, segments, beats, downbea
       const t = (fr + i) / FPS;
       const on = talk.some(([a, b]) => t >= a && t <= b);
       const lastEnd = last ? last.end : duration;
-      const b0 = t < 0.1 ? 0.6 : last && t > last.start - 0.15 && t <= lastEnd + 0.1 ? 0.07 : on ? 0.12 : t > lastEnd ? 0.32 : 0.24;
+      const b0 = t < 0.1 ? 0.6 : last && t > last.start - 0.15 && t <= lastEnd + 0.1 ? 0.07 : on ? 0.08 : t > lastEnd ? 0.3 : 0.2;
       const tot = duration + TAIL7;
       s += t > tot - 0.5 ? b0 * Math.max(0, (tot - t) / 0.5) : b0;
     }
