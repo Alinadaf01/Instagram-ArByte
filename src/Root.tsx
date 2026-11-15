@@ -17,6 +17,8 @@ import {I5Cover} from './v5/Cover';
 import {PriceList} from './lists/PriceList';
 import {Gaming, TAIL6, V6_MUSIC_START, V6Props} from './v6/Gaming';
 import {GamingCover} from './v6/Cover';
+import {Qc, TAIL7, V7_MUSIC_START, V7Props} from './v7/Qc';
+import {QcCover} from './v7/Cover';
 
 const v2Metadata: CalculateMetadataFunction<V2Props> = async ({props}) => {
   const [edit, analysis, cut] = await Promise.all([
@@ -87,6 +89,23 @@ const v6Metadata: CalculateMetadataFunction<V6Props> = async ({props}) => {
   const beats = all.map((b) => b - V6_MUSIC_START).filter((b) => b >= -0.01 && b <= total);
   const downbeats = all.filter((_, i) => i >= d0 && (i - d0) % 4 === 0).map((b) => b - V6_MUSIC_START).filter((b) => b <= total);
   return {durationInFrames: Math.round(total * FPS), props: {...props, duration, words: edit?.words ?? [], segments: edit?.segments ?? [], beats, downbeats}};
+};
+
+const v7Metadata: CalculateMetadataFunction<V7Props> = async ({props}) => {
+  const [edit, mb, hasMusic] = await Promise.all([
+    fetchJson<{duration: number; words: V7Props['words']; segments: V7Props['segments']}>('video7/edit.json'),
+    fetchJson<{beats: number[]; start?: number}>('video7/music_beats.json'),
+    exists('video7/music.mp3'),
+  ]);
+  const duration = edit?.duration ?? 25.9;
+  const total = duration + TAIL7;
+  const start = mb?.start ?? V7_MUSIC_START;
+  // no track yet → a 120 bpm grid keeps the visual pulses alive
+  const all = mb?.beats ?? Array.from({length: Math.ceil(total * 2) + 4}, (_, i) => start + i * 0.5);
+  const d0 = all.findIndex((b) => b >= start - 0.05);
+  const beats = all.map((b) => b - start).filter((b) => b >= -0.01 && b <= total);
+  const downbeats = all.filter((_, i) => i >= d0 && (i - d0) % 4 === 0).map((b) => b - start).filter((b) => b <= total);
+  return {durationInFrames: Math.round(total * FPS), props: {...props, duration, words: edit?.words ?? [], segments: edit?.segments ?? [], beats, downbeats, hasMusic: hasMusic && !!mb, musicStart: start}};
 };
 
 // beats of music.mp3 re-based to a reel that starts `start` seconds into it
@@ -222,6 +241,17 @@ export const RemotionRoot: React.FC = () => (
     calculateMetadata={v6Metadata}
   />
   <Composition id="GamingCover" component={GamingCover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
+  <Composition
+    id="Qc"
+    component={Qc}
+    fps={FPS}
+    width={WIDTH}
+    height={HEIGHT}
+    durationInFrames={FPS * 27}
+    defaultProps={{duration: 25.9, words: [], segments: [], beats: [], downbeats: [], hasMusic: false, musicStart: V7_MUSIC_START}}
+    calculateMetadata={v7Metadata}
+  />
+  <Composition id="QcCover" component={QcCover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="PriceList" component={PriceList} fps={FPS} width={1080} height={1350} durationInFrames={1} />
   <Composition id="I5Cover" component={I5Cover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
   <Composition id="SurfaceCover" component={SurfaceCover} fps={FPS} width={WIDTH} height={HEIGHT} durationInFrames={1} />
